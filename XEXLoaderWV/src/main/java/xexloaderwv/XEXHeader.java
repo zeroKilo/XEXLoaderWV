@@ -130,11 +130,18 @@ public class XEXHeader {
 		compressed = new byte[len];
 		for(int i = 0; i < len; i ++)
 			compressed[i] = data[offsetPE + i];
+		Log.info("XEX Loader: Encryption type = " + baseFileFormat.encryption);
+		Log.info("XEX Loader: Compression type = " + baseFileFormat.compression);
+		
 		switch(baseFileFormat.encryption)
 		{
+			case 0:
+				break;
 			case 1:
 				compressed = Helper.AESDecrypt(sessionKey, compressed);
 				break;
+			default:
+				throw new Exception("Encryption type " + baseFileFormat.encryption + " not supported");
 		}
 		peImage = new byte[loaderInfo.imageSize];
 		int posIn = 0, posOut = 0;
@@ -154,22 +161,39 @@ public class XEXHeader {
 				byte[] buff = new byte[nc.blockSize];
 				for(int i = 0; i < nc.blockSize; i++)
 					buff[i] = compressed[posIn + i];
+				posIn += nc.blockSize;
 				ByteArrayOutputStream bop = new ByteArrayOutputStream();
-				BinaryReader br = new BinaryReader(new ByteArrayProvider(buff), false);	
-				for(int i = 24; i < buff.length;)
+				BinaryReader br = new BinaryReader(new ByteArrayProvider(buff), false);
+				int nextSize;
+				do
 				{
-					len = br.readShort(i);
-					if(len == 0)
-						break;
-					for(int j = 0; j < len; j++)
-						bop.write(buff[i + j + 2]);
-					i += 2 + len;
+					nextSize = br.readInt(0);
+					for(int i = 24; i < buff.length;)
+					{
+						len = br.readShort(i);
+						if(len == 0)
+							break;
+						for(int j = 0; j < len; j++)
+							bop.write(buff[i + j + 2]);
+						i += 2 + len;
+					}
+					if(nextSize != 0)
+					{
+						buff = new byte[nextSize];
+						for(int i = 0; i < nextSize; i++)
+							buff[i] = compressed[posIn + i];
+						posIn += nextSize;
+						br = new BinaryReader(new ByteArrayProvider(buff), false);
+					}
 				}
+				while(nextSize != 0);
 				byte[] input = bop.toByteArray();
 				byte[] output = LZXHelper.Decompress(input);
 				for(int i = 0; i < output.length; i++)
 					peImage[i + posOut] = output[i];
 				break;
+			default:
+				throw new Exception("Compression type " + baseFileFormat.compression + " not supported");
 		}
 	}
 	
@@ -200,15 +224,10 @@ public class XEXHeader {
 		SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, "EntryPoint", SourceType.ANALYSIS);
 	}
 	
-	public void MakeBlock(MemoryBlockUtil mbu, Program program, String name, String desc, int address, InputStream s, int size, String flgs, TaskMonitor monitor)
+	public void MakeBlock(MemoryBlockUtil mbu, Program program, String name, String desc, int address, InputStream s, int size, String flgs, TaskMonitor monitor) throws Exception
 	{
-		try
-		{
-			byte[] bf = flgs.getBytes();
-			Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(address);
-			mbu.createInitializedBlock(name, addr, s, size, desc, desc, bf[0] == '1', bf[1] == '1', bf[2] == '1', monitor);
-		}
-		catch (Exception e) {
-		}
+		byte[] bf = flgs.getBytes();
+		Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(address);
+		mbu.createInitializedBlock(name, addr, s, size, desc, desc, bf[0] == '1', bf[1] == '1', bf[2] == '1', monitor);
 	}
 }
