@@ -33,6 +33,8 @@ public class XEXHeader {
 	public byte[] peImage;
 	public int imageBaseAddress;
 	public int entryPointAddress;
+	public ArrayList<String> stringTable;
+	public ArrayList<ImportLibrary> importLibs;
 	
 	public XEXHeader(byte[] data, List<Option> list) throws Exception
 	{
@@ -105,20 +107,122 @@ public class XEXHeader {
 			BinaryReader b = null;
 			if(sec.data != null)
 				b = new BinaryReader(new ByteArrayProvider(sec.data), false);
-			switch(sec.id)
+			switch(sec.id >> 8)
 			{
-				case 0x3FF:
+				case 0x3:
 					baseFileFormat = new BaseFileFormat(sec.data);				
 					break;
-				case 0x10100:					
+				case 0x101:					
 					entryPointAddress = b.readInt(0);
 					Log.info("XEX Loader: Entry point address = 0x" + String.format("%08X", entryPointAddress));
 					break;
-				case 0x10201:
+				case 0x102:
 					imageBaseAddress = b.readInt(0);
 					Log.info("XEX Loader: Imagebase address = 0x" + String.format("%08X", imageBaseAddress));
 					break;
+				case 0x103:
+					ReadImportLibraries(sec.data);
+					break;
 			}
+		}
+	}
+	
+	public void ProcessImportLibraries(MemoryBlockUtil mbu, Program program, TaskMonitor monitor) throws Exception
+	{
+		BinaryReader b = new BinaryReader(new ByteArrayProvider(peImage), false);
+		for(ImportLibrary lib : importLibs)
+		{
+			for(int i = 0; i < lib.records.size(); i++)
+			{
+				int address = lib.records.get(i) - imageBaseAddress;
+				int value = b.readInt(address);
+				int ordinal = value & 0xFFFF;
+				int type = value >> 24;
+				ImportFunction ipf;
+				switch(type)
+				{
+					case 0:
+						ipf = new ImportFunction();
+						ipf.address = lib.records.get(i);
+						ipf.ordinal = ordinal;
+						ipf.thunk = 0;
+						lib.functions.add(ipf);
+						break;
+					case 1:
+						ipf = lib.functions.get(lib.functions.size() - 1);
+						ipf.thunk =  lib.records.get(i);
+						break;
+				}
+			}
+		}
+		int countImpl = 0;
+		int countThunk = 0;
+		for(ImportLibrary lib : importLibs)
+		{
+			for(ImportFunction fun : lib.functions)
+			{
+				Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(fun.address);
+				String name = ImportRenamer.Rename(lib.name, fun.ordinal);
+				if(name.equals(""))
+					continue;
+				SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, "__imp__" + name , SourceType.IMPORTED);
+				countImpl++;
+				if(fun.thunk != 0)
+				{
+					int pos = fun.thunk - imageBaseAddress;
+					peImage[pos] = 0x38;
+					peImage[pos + 1] = 0x60;
+					peImage[pos + 4] = 0x38;
+					peImage[pos + 5] = (byte)0x80;
+					addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(fun.thunk);
+					SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, name, SourceType.ANALYSIS);
+					countThunk++;
+				}
+			}
+		}
+		Log.info("XEX Loader: Added import symbols(" + countImpl + " References, " + countThunk + " Thunks)");
+	}
+	
+	public void ReadStringTable(byte[] data, int start, int len) throws Exception
+	{
+		stringTable = new ArrayList<String>();
+		int pos = start;
+		String s = "";
+		while(pos < start + len)
+		{
+			if(data[pos] != 0)
+				s += (char)data[pos];
+			else
+			{
+				stringTable.add(s);
+				s = "";
+			}
+			pos++;
+		}
+	}
+	
+	public void ReadImportLibraries(byte[] data) throws Exception
+	{
+		importLibs = new ArrayList<ImportLibrary>();
+		BinaryReader b = new BinaryReader(new ByteArrayProvider(data), false);
+		int pos = 4;
+		int stringSize = b.readInt(pos);
+		int libCount = b.readInt(pos + 4);
+		pos += 8;
+		ReadStringTable(data, pos, stringSize);
+		pos += stringSize;
+		for(int i = 0; i < libCount; i++)
+		{
+			ImportLibrary lib = new ImportLibrary();
+			pos += 0x24;
+			short nameIdx = b.readShort(pos);
+			short count = b.readShort(pos + 2);
+			pos += 4;
+			lib.name = stringTable.get(nameIdx);
+			for(int j = 0; j < count; j++)
+				lib.records.add(b.readInt(pos + j * 4));
+			importLibs.add(lib);
+			pos += count * 4;
 		}
 	}
 	
@@ -197,6 +301,18 @@ public class XEXHeader {
 		}
 	}
 	
+	public void ProcessPData(byte[] data, MemoryBlockUtil mbu, Program program, TaskMonitor monitor) throws Exception	
+	{
+		BinaryReader b = new BinaryReader(new ByteArrayProvider(data), false);
+		for(int i = 0; i < data.length; i += 8)
+		{
+			int address = b.readInt(i);
+			Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(address);
+			SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, "Function_" + String.format("%08X", address), SourceType.ANALYSIS);
+		}
+		Log.info("XEX Loader: Loaded " + (data.length / 8) + " additional function symbols");
+	}
+	
 	public void ProcessPEImage(MemoryBlockUtil mbu, Program program, TaskMonitor monitor) throws Exception
 	{
 		Log.info("XEX Loader: Processing PE Image");
@@ -218,6 +334,8 @@ public class XEXHeader {
 			perm += ((sec.Characteristics & 0x80000000) != 0) ? "1" : "0";
 			perm += ((sec.Characteristics & 0x20000000) != 0) ? "1" : "0";
 			MakeBlock(mbu, program, sec.Name, sec.Name, address, ds, data.length, perm, monitor);
+			if(sec.Name.equals(".pdata"))
+				ProcessPData(data, mbu, program, monitor);
 			ds.close();			
 		}
 		Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(entryPointAddress);

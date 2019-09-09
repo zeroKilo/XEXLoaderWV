@@ -30,7 +30,7 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 		Log.info("XEX Loader: Checking Signature" );
 		BinaryReader br = new BinaryReader(provider, false);
 		if(br.readInt(0) == 0x58455832)
-			loadSpecs.add(new LoadSpec(this, 0, new LanguageCompilerSpecPair("PowerPC:BE:32:default", "default"), true));
+			loadSpecs.add(new LoadSpec(this, 0, new LanguageCompilerSpecPair("PowerPC:BE:64:VLE-32addr", "default"), true));
 		return loadSpecs;
 	}
 
@@ -48,6 +48,7 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 		Log.info("XEX Loader: Loading header");
 		try {
 			XEXHeader h = new XEXHeader(buffROM, options);
+			h.ProcessImportLibraries(mbu, program, monitor);
 			h.ProcessPEImage(mbu, program, monitor);
 			LZXHelper.CleanUp();
 		} catch (Exception e) {
