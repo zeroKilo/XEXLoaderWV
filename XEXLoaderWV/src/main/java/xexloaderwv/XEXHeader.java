@@ -17,6 +17,7 @@ import ghidra.program.model.listing.Program;
 import ghidra.program.model.symbol.SourceType;
 import ghidra.program.model.symbol.SymbolUtilities;
 import ghidra.util.task.TaskMonitor;
+import xexloaderwv.PDBFile.SymbolRecord;
 
 public class XEXHeader {
 	public int magic;
@@ -127,6 +128,28 @@ public class XEXHeader {
 		}
 	}
 	
+	public void ProcessAdditionalPDB(PDBFile pdb, Program program) throws Exception
+	{
+		DOSHeader dos = new DOSHeader(peImage);
+		NTHeader nt = new NTHeader(peImage, dos.e_lfanew);
+		int address = imageBaseAddress;
+		for(NTHeader.SectionHeader sec : nt.secHeaders)
+			if(sec.Name.equals(".text"))
+			{
+				address += sec.VirtualAddress;
+				break;
+			}
+		int count = 0;
+		for(SymbolRecord sym : pdb.symbols)
+			if(sym.pubsymflags == 2 && sym.rectyp == 0x110e)
+			{
+				count++;
+				Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(address + sym.off);
+				SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, sym.name, SourceType.ANALYSIS);
+			}	
+		Log.info("XEX Loader: Loaded " + count + " pdb function symbols");	
+	}
+	
 	public void ProcessImportLibraries(MemoryBlockUtil mbu, Program program, TaskMonitor monitor) throws Exception
 	{
 		BinaryReader b = new BinaryReader(new ByteArrayProvider(peImage), false);
@@ -162,10 +185,7 @@ public class XEXHeader {
 			for(ImportFunction fun : lib.functions)
 			{
 				Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(fun.address);
-				String name = ImportRenamer.Rename(lib.name, fun.ordinal);
-				if(name.equals(""))
-					continue;
-				SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, "__imp__" + name , SourceType.IMPORTED);
+				SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, "__imp__" + ImportRenamer.Rename(lib.name, fun.ordinal) , SourceType.IMPORTED);
 				countImpl++;
 				if(fun.thunk != 0)
 				{
@@ -175,7 +195,7 @@ public class XEXHeader {
 					peImage[pos + 4] = 0x38;
 					peImage[pos + 5] = (byte)0x80;
 					addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(fun.thunk);
-					SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, name, SourceType.ANALYSIS);
+					SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, ImportRenamer.Rename(lib.name, fun.ordinal) , SourceType.ANALYSIS);
 					countThunk++;
 				}
 			}
@@ -235,8 +255,7 @@ public class XEXHeader {
 		for(int i = 0; i < len; i ++)
 			compressed[i] = data[offsetPE + i];
 		Log.info("XEX Loader: Encryption type = " + baseFileFormat.encryption);
-		Log.info("XEX Loader: Compression type = " + baseFileFormat.compression);
-		
+		Log.info("XEX Loader: Compression type = " + baseFileFormat.compression);		
 		switch(baseFileFormat.encryption)
 		{
 			case 0:
@@ -313,7 +332,7 @@ public class XEXHeader {
 		Log.info("XEX Loader: Loaded " + (data.length / 8) + " additional function symbols");
 	}
 	
-	public void ProcessPEImage(MemoryBlockUtil mbu, Program program, TaskMonitor monitor) throws Exception
+	public void ProcessPEImage(MemoryBlockUtil mbu, Program program, TaskMonitor monitor, boolean ProcessPData) throws Exception
 	{
 		Log.info("XEX Loader: Processing PE Image");
 		DOSHeader dos = new DOSHeader(peImage);
@@ -334,12 +353,13 @@ public class XEXHeader {
 			perm += ((sec.Characteristics & 0x80000000) != 0) ? "1" : "0";
 			perm += ((sec.Characteristics & 0x20000000) != 0) ? "1" : "0";
 			MakeBlock(mbu, program, sec.Name, sec.Name, address, ds, data.length, perm, monitor);
-			if(sec.Name.equals(".pdata"))
+			if(sec.Name.equals(".pdata") && ProcessPData)
 				ProcessPData(data, mbu, program, monitor);
 			ds.close();			
 		}
 		Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(entryPointAddress);
-		SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, "EntryPoint", SourceType.ANALYSIS);
+		program.getSymbolTable().addExternalEntryPoint(addr);
+	    program.getSymbolTable().createLabel(addr, "entry", SourceType.ANALYSIS);
 	}
 	
 	public void MakeBlock(MemoryBlockUtil mbu, Program program, String name, String desc, int address, InputStream s, int size, String flgs, TaskMonitor monitor) throws Exception

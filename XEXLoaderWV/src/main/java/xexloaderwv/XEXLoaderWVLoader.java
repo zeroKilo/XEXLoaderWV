@@ -46,10 +46,12 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 		byte[] buffROM = provider.getInputStream(0).readAllBytes();
 		ByteArrayProvider bapROM = new ByteArrayProvider(buffROM);
 		Log.info("XEX Loader: Loading header");
-		try {
+		try {			
 			XEXHeader h = new XEXHeader(buffROM, options);
 			h.ProcessImportLibraries(mbu, program, monitor);
-			h.ProcessPEImage(mbu, program, monitor);
+			h.ProcessPEImage(mbu, program, monitor, (boolean)options.get(1).getValue());
+			if(!((String)options.get(2).getValue()).equals(""))
+				h.ProcessAdditionalPDB(new PDBFile((String)options.get(2).getValue(), monitor), program);
 			LZXHelper.CleanUp();
 		} catch (Exception e) {
 			bapROM.close();
@@ -63,7 +65,9 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 	public List<Option> getDefaultOptions(ByteProvider provider, LoadSpec loadSpec, DomainObject domainObject,
 			boolean loadIntoProgram) {
 		List<Option> list = new ArrayList<Option>();
-		list.add(new Option("Is DevKit?", true));
+		list.add(new Option("Is DevKit", true));
+		list.add(new Option("Process .pdata", true));
+		list.add(new Option("Path to pdb", ""));
 		return list;
 	}
 }
