@@ -7,12 +7,10 @@ import java.util.List;
 
 import org.python.jline.internal.Log;
 
-import ghidra.app.util.MemoryBlockUtil;
 import ghidra.app.util.Option;
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteArrayProvider;
 import ghidra.app.util.bin.ByteProvider;
-import ghidra.app.util.importer.MemoryConflictHandler;
 import ghidra.app.util.importer.MessageLog;
 import ghidra.app.util.opinion.AbstractLibrarySupportLoader;
 import ghidra.app.util.opinion.LoadSpec;
@@ -40,16 +38,16 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 	}
 
 	@Override
-	protected void load(ByteProvider provider, LoadSpec loadSpec, List<Option> options, Program program,
-			MemoryConflictHandler handler, TaskMonitor monitor, MessageLog log) throws CancelledException, IOException {
-		MemoryBlockUtil mbu = new MemoryBlockUtil(program, handler);
+	protected void load(ByteProvider provider, LoadSpec loadSpec, List<Option> options,
+			Program program, TaskMonitor monitor, MessageLog log)
+			throws CancelledException, IOException {
 		byte[] buffROM = provider.getInputStream(0).readAllBytes();
 		ByteArrayProvider bapROM = new ByteArrayProvider(buffROM);
 		Log.info("XEX Loader: Loading header");
 		try {			
 			XEXHeader h = new XEXHeader(buffROM, options);
-			h.ProcessImportLibraries(mbu, program, monitor);
-			h.ProcessPEImage(mbu, program, monitor, (boolean)options.get(1).getValue());
+			h.ProcessImportLibraries(program, monitor);
+			h.ProcessPEImage(program, monitor, log, (boolean)options.get(1).getValue());
 			if(!((String)options.get(2).getValue()).equals(""))
 				h.ProcessAdditionalPDB(new PDBFile((String)options.get(2).getValue(), monitor), program);
 			LZXHelper.CleanUp();

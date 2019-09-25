@@ -2748,6 +2748,8 @@ public class ImportRenamer {
 				result += module + "_ord_" + ordinal;
 				break;
 		}
+		if(result.isEmpty())
+			result += module + "_ord_" + ordinal;
 		return result;
 	}
 	

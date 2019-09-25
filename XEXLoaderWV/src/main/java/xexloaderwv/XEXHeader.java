@@ -6,16 +6,23 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.python.jline.internal.Log;
 
-import ghidra.app.util.MemoryBlockUtil;
+import ghidra.app.util.MemoryBlockUtils;
 import ghidra.app.util.Option;
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteArrayProvider;
+import ghidra.app.util.importer.MessageLog;
 import ghidra.program.model.address.Address;
+import ghidra.program.model.data.DataUtilities;
+import ghidra.program.model.data.Structure;
+import ghidra.program.model.data.DataUtilities.ClearDataMode;
 import ghidra.program.model.listing.Program;
+import ghidra.program.model.mem.MemoryBlock;
 import ghidra.program.model.symbol.SourceType;
 import ghidra.program.model.symbol.SymbolUtilities;
+import ghidra.util.Msg;
 import ghidra.util.task.TaskMonitor;
 import xexloaderwv.PDBFile.SymbolRecord;
 
@@ -36,6 +43,7 @@ public class XEXHeader {
 	public int entryPointAddress;
 	public ArrayList<String> stringTable;
 	public ArrayList<ImportLibrary> importLibs;
+	public ArrayList<MemoryBlock> blocks = new ArrayList<MemoryBlock>();
 	
 	public XEXHeader(byte[] data, List<Option> list) throws Exception
 	{
@@ -143,14 +151,17 @@ public class XEXHeader {
 		for(SymbolRecord sym : pdb.symbols)
 			if(sym.pubsymflags == 2 && sym.rectyp == 0x110e)
 			{
-				count++;
-				Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(address + sym.off);
-				SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, sym.name, SourceType.ANALYSIS);
+				Address addr = MakeAddress((address + sym.off) & 0xFFFFFFFFL);
+				if(addr != null)
+				{
+					SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, sym.name, SourceType.ANALYSIS);
+					count++;
+				}
 			}	
 		Log.info("XEX Loader: Loaded " + count + " pdb function symbols");	
 	}
 	
-	public void ProcessImportLibraries(MemoryBlockUtil mbu, Program program, TaskMonitor monitor) throws Exception
+	public void ProcessImportLibraries(Program program, TaskMonitor monitor) throws Exception
 	{
 		BinaryReader b = new BinaryReader(new ByteArrayProvider(peImage), false);
 		for(ImportLibrary lib : importLibs)
@@ -184,9 +195,12 @@ public class XEXHeader {
 		{
 			for(ImportFunction fun : lib.functions)
 			{
-				Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(fun.address);
-				SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, "__imp__" + ImportRenamer.Rename(lib.name, fun.ordinal) , SourceType.IMPORTED);
-				countImpl++;
+				Address addr = MakeAddress(fun.address & 0xFFFFFFFFL);
+				if(addr != null)
+				{
+					SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, "__imp__" + ImportRenamer.Rename(lib.name, fun.ordinal) , SourceType.IMPORTED);
+					countImpl++;
+				}
 				if(fun.thunk != 0)
 				{
 					int pos = fun.thunk - imageBaseAddress;
@@ -194,9 +208,12 @@ public class XEXHeader {
 					peImage[pos + 1] = 0x60;
 					peImage[pos + 4] = 0x38;
 					peImage[pos + 5] = (byte)0x80;
-					addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(fun.thunk);
-					SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, ImportRenamer.Rename(lib.name, fun.ordinal) , SourceType.ANALYSIS);
-					countThunk++;
+					addr = MakeAddress(fun.thunk & 0xFFFFFFFFL);
+					if(addr != null)
+					{
+						SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, ImportRenamer.Rename(lib.name, fun.ordinal) , SourceType.ANALYSIS);
+						countThunk++;
+					}
 				}
 			}
 		}
@@ -320,23 +337,25 @@ public class XEXHeader {
 		}
 	}
 	
-	public void ProcessPData(byte[] data, MemoryBlockUtil mbu, Program program, TaskMonitor monitor) throws Exception	
+	public void ProcessPData(byte[] data, Program program, TaskMonitor monitor) throws Exception	
 	{
 		BinaryReader b = new BinaryReader(new ByteArrayProvider(data), false);
 		for(int i = 0; i < data.length; i += 8)
 		{
 			int address = b.readInt(i);
-			Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(address);
-			SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, "Function_" + String.format("%08X", address), SourceType.ANALYSIS);
+			Address addr = MakeAddress(address & 0xFFFFFFFFL);
+			if(addr != null)
+				SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, "Function_" + String.format("%08X", address), SourceType.ANALYSIS);
 		}
 		Log.info("XEX Loader: Loaded " + (data.length / 8) + " additional function symbols");
 	}
 	
-	public void ProcessPEImage(MemoryBlockUtil mbu, Program program, TaskMonitor monitor, boolean ProcessPData) throws Exception
+	public void ProcessPEImage(Program program, TaskMonitor monitor, MessageLog log, boolean ProcessPData) throws Exception
 	{
 		Log.info("XEX Loader: Processing PE Image");
 		DOSHeader dos = new DOSHeader(peImage);
 		NTHeader nt = new NTHeader(peImage, dos.e_lfanew);
+		byte[] pdata = null;
 		for(NTHeader.SectionHeader sec : nt.secHeaders)
 		{
 			int address = sec.VirtualAddress;
@@ -352,20 +371,49 @@ public class XEXHeader {
 			perm += ((sec.Characteristics & 0x40000000) != 0) ? "1" : "0";
 			perm += ((sec.Characteristics & 0x80000000) != 0) ? "1" : "0";
 			perm += ((sec.Characteristics & 0x20000000) != 0) ? "1" : "0";
-			MakeBlock(mbu, program, sec.Name, sec.Name, address, ds, data.length, perm, monitor);
-			if(sec.Name.equals(".pdata") && ProcessPData)
-				ProcessPData(data, mbu, program, monitor);
-			ds.close();			
+			MakeBlock(program, sec.Name, sec.Name, address & 0xFFFFFFFFL, ds, data.length, perm, null, log, monitor);
+			ds.close();	
+			if(sec.Name.equals(".pdata"))
+				pdata = data;
 		}
-		Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(entryPointAddress);
-		program.getSymbolTable().addExternalEntryPoint(addr);
-	    program.getSymbolTable().createLabel(addr, "entry", SourceType.ANALYSIS);
+		if(pdata != null && ProcessPData)
+			ProcessPData(pdata, program, monitor);
+		Address addr = MakeAddress(entryPointAddress & 0xFFFFFFFFL);
+		if(addr != null)
+		{
+			program.getSymbolTable().addExternalEntryPoint(addr);
+		    program.getSymbolTable().createLabel(addr, "entry", SourceType.ANALYSIS);
+		}
 	}
 	
-	public void MakeBlock(MemoryBlockUtil mbu, Program program, String name, String desc, int address, InputStream s, int size, String flgs, TaskMonitor monitor) throws Exception
+
+	public void MakeBlock(Program program, String name, String desc, long address, InputStream s, int size, String perm, Structure struc, MessageLog log, TaskMonitor monitor)
 	{
-		byte[] bf = flgs.getBytes();
-		Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(address);
-		mbu.createInitializedBlock(name, addr, s, size, desc, desc, bf[0] == '1', bf[1] == '1', bf[2] == '1', monitor);
+		try
+		{
+			byte[] bf = perm.getBytes();
+			Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(address);
+			MemoryBlock block = MemoryBlockUtils.createInitializedBlock(program, true, name, addr, s, size, desc, null, bf[0] == '1', bf[1] == '1', bf[2] == '1', log, monitor);
+			blocks.add(block);
+			if(struc != null)
+				DataUtilities.createData(program, block.getStart(), struc, -1, false, ClearDataMode.CLEAR_ALL_UNDEFINED_CONFLICT_DATA);
+		}
+		catch (Exception e) {
+			Msg.error(this, ExceptionUtils.getStackTrace(e));
+		}
+	}
+	
+	public Address MakeAddress(long address)
+	{
+	    for(MemoryBlock block : blocks)
+	    {
+	        if(address >= block.getStart().getAddressableWordOffset() &&
+	           address <= block.getEnd().getAddressableWordOffset())
+	        {
+	            Address addr = block.getStart();
+	            return addr.add(address - addr.getAddressableWordOffset());            
+	        }
+	    }
+	    return null;
 	}
 }
