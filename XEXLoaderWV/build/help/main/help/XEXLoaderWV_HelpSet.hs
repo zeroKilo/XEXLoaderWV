@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='ISO-8859-1' ?>
 <!DOCTYPE helpset PUBLIC "-//Sun Microsystems Inc.//DTD JavaHelp HelpSet Version 2.0//EN" "http://java.sun.com/products/javahelp/helpset_2_0.dtd">
 
-<!-- HelpSet auto-generated on Wed Sep 25 19:40:45 CEST 2019 -->
+<!-- HelpSet auto-generated on Fri Sep 27 22:36:47 CEST 2019 -->
 <helpset version="2.0">
 	<title>XEXLoaderWV HelpSet</title>
 	<maps>

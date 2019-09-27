@@ -393,7 +393,7 @@ public class XEXHeader {
 		{
 			byte[] bf = perm.getBytes();
 			Address addr = program.getAddressFactory().getDefaultAddressSpace().getAddress(address);
-			MemoryBlock block = MemoryBlockUtils.createInitializedBlock(program, true, name, addr, s, size, desc, null, bf[0] == '1', bf[1] == '1', bf[2] == '1', log, monitor);
+			MemoryBlock block = MemoryBlockUtils.createInitializedBlock(program, false, name, addr, s, size, desc, null, bf[0] == '1', bf[1] == '1', bf[2] == '1', log, monitor);
 			blocks.add(block);
 			if(struc != null)
 				DataUtilities.createData(program, block.getStart(), struc, -1, false, ClearDataMode.CLEAR_ALL_UNDEFINED_CONFLICT_DATA);
