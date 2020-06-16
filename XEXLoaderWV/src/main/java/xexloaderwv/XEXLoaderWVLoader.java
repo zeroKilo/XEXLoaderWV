@@ -46,8 +46,8 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 		Log.info("XEX Loader: Loading header");
 		try {			
 			XEXHeader h = new XEXHeader(buffROM, options);
-			h.ProcessImportLibraries(program, monitor);
 			h.ProcessPEImage(program, monitor, log, (boolean)options.get(1).getValue());
+			h.ProcessImportLibraries(program, monitor);
 			if(!((String)options.get(2).getValue()).equals(""))
 				h.ProcessAdditionalPDB(new PDBFile((String)options.get(2).getValue(), monitor), program);
 			LZXHelper.CleanUp();
