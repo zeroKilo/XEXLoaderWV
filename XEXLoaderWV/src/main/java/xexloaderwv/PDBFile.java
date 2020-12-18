@@ -101,13 +101,17 @@ public class PDBFile {
 		int pos = 0;
 		monitor.setMaximum(data.length);
 		monitor.setMessage("Loading symbol records");
-		while(pos < data.length)
+		try
 		{
-			monitor.setProgress(pos);
-			SymbolRecord sym = new SymbolRecord(bap, pos);
-			pos += sym.reclen;
-			symbols.add(sym);
+			while(pos < data.length)
+			{
+				monitor.setProgress(pos);
+				SymbolRecord sym = new SymbolRecord(bap, pos);
+				pos += sym.reclen;
+				symbols.add(sym);
+			}
 		}
+		catch (Exception e){}
 		monitor.setProgress(0);
 		bap.close();
 	}
