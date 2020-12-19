@@ -51,6 +51,13 @@ public class XEXHeader {
 		BinaryReader b = new BinaryReader(new ByteArrayProvider(data), false);
 		magic = b.readInt(0);
 		flags = b.readInt(4);
+		String[] flagNames = {"Title Module","Exports To Title","System Debugger","DLL Module","Module Patch","Patch Full","Patch Delta","User Mode"};
+		ArrayList<String> flagList = new ArrayList<String>();
+		for(int i = 0; i < 8; i++)
+			if((flags & (1 << i)) != 0)
+				flagList.add(flagNames[i]);
+		for(String flag : flagList)
+			Log.info("XEX Loader: Flag : " + flag);
 		offsetPE = b.readInt(8);
 		reserved = b.readInt(12);
 		offsetSecuInfo = b.readInt(16);
@@ -113,13 +120,29 @@ public class XEXHeader {
 		Log.info("XEX Loader: Processing section info");
 		for(XEXOptionalHeader sec : optHeaders)
 		{
+			String s = "";
 			BinaryReader b = null;
 			if(sec.data != null)
 				b = new BinaryReader(new ByteArrayProvider(sec.data), false);
 			switch(sec.id >> 8)
 			{
+				case 0x2:
+					for(int i = 4; i < 12; i++)
+						s += (char)b.readByte(i);
+					Log.info("XEX Loader: Ressource Info = " + s);
+					break;
 				case 0x3:
 					baseFileFormat = new BaseFileFormat(sec.data);				
+					break;
+				case 0x80:
+					for(int i = 4; i < sec.data.length; i++)
+					{
+						int test = b.readByte(i);
+						if(test == 0)
+							break;
+						s += (char)test;
+					}
+					Log.info("XEX Loader: Bounding Path = " + s);
 					break;
 				case 0x101:					
 					entryPointAddress = b.readInt(0);
@@ -132,6 +155,7 @@ public class XEXHeader {
 				case 0x103:
 					ReadImportLibraries(sec.data);
 					break;
+				
 			}
 		}
 	}
