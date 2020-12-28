@@ -10,4 +10,15 @@ requires min. JDK 12.0.2
 
 In case of troubles disable `Is DevKit` flag during the importinf of the xex file.
 
+## Compile LZXdecomp
+
+On linux/osx is just enough to go in `XEXLoaderWV/LZXDecomp/[your-folder]`, then:
+
+```
+cmake ..
+make
+```
+
+Right now for linux64 the cmake files was already generated.
+
 (shoutout to my friend the Domo who got me into X360 RE)
