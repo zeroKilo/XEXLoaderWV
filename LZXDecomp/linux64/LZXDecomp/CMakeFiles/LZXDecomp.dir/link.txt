@@ -1,0 +1,1 @@
+/usr/bin/cc CMakeFiles/LZXDecomp.dir/lzxc.c.o CMakeFiles/LZXDecomp.dir/lzxd.c.o CMakeFiles/LZXDecomp.dir/LZXDecomp.c.o CMakeFiles/LZXDecomp.dir/system.c.o -o LZXDecomp 
