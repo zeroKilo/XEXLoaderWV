@@ -45,9 +45,8 @@ public class XEXHeader {
 	public ArrayList<ImportLibrary> importLibs;
 	public ArrayList<MemoryBlock> blocks = new ArrayList<MemoryBlock>();
 	
-	public XEXHeader(byte[] data, List<Option> list) throws Exception
+	public XEXHeader(byte[] data, List<Option> list, boolean isDevKit) throws Exception
 	{
-		LZXHelper.Init();
 		BinaryReader b = new BinaryReader(new ByteArrayProvider(data), false);
 		magic = b.readInt(0);
 		flags = b.readInt(4);
@@ -89,11 +88,12 @@ public class XEXHeader {
 		ProcessOptionalHeaders();
 		Log.info("XEX Loader: Loading loader info");
 		loaderInfo = new XEXLoaderInfo(data, offsetSecuInfo, list);
+		loaderInfo.isDevKit = isDevKit;
 		DecryptFileKey();
 		Log.info("XEX Loader: Loading section info");
 		int sectionCount = b.readInt(offsetSecuInfo + 0x180);
 		for(int i=0; i < sectionCount; i++)
-			sections.add(new XEXSection(data, offsetSecuInfo + (i * 24) + 0x184));			
+			sections.add(new XEXSection(data, offsetSecuInfo + (i * 24) + 0x184));
 		ReadPEImage(data);
 	}
 	
@@ -352,7 +352,7 @@ public class XEXHeader {
 				}
 				while(nextSize != 0);
 				byte[] input = bop.toByteArray();
-				byte[] output = LZXHelper.Decompress(input);
+				byte[] output = new LzxDecompression().DecompressLZX(input);
 				for(int i = 0; i < output.length; i++)
 					peImage[i + posOut] = output[i];
 				break;

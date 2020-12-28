@@ -41,20 +41,44 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 	protected void load(ByteProvider provider, LoadSpec loadSpec, List<Option> options,
 			Program program, TaskMonitor monitor, MessageLog log)
 			throws CancelledException, IOException {
+			try
+			{
+				Log.info("XEX Loader: Trying to load as dev kit...");
+				LoadXEX(provider, loadSpec, options, program, monitor, log, true);
+			}
+			catch(Exception e)
+			{
+				try
+				{
+					Log.info("XEX Loader: Trying to load as retail...");
+					LoadXEX(provider, loadSpec, options, program, monitor, log, false);
+				}
+				catch(Exception e2)
+				{
+					Log.info("XEX Loader: Failed to load");
+					throw new IOException();
+				}
+			}
+		
+	}
+	
+	public void LoadXEX(ByteProvider provider, LoadSpec loadSpec, List<Option> options,
+			Program program, TaskMonitor monitor, MessageLog log, boolean isDevKit) throws Exception
+	{
 		byte[] buffROM = provider.getInputStream(0).readAllBytes();
 		ByteArrayProvider bapROM = new ByteArrayProvider(buffROM);
 		Log.info("XEX Loader: Loading header");
 		try {			
-			XEXHeader h = new XEXHeader(buffROM, options);
-			h.ProcessPEImage(program, monitor, log, (boolean)options.get(1).getValue());
+			XEXHeader h = new XEXHeader(buffROM, options, isDevKit);
+			boolean processPData = (boolean)options.get(0).getValue();
+			h.ProcessPEImage(program, monitor, log, processPData);
 			h.ProcessImportLibraries(program, monitor);
-			if(!((String)options.get(2).getValue()).equals(""))
-				h.ProcessAdditionalPDB(new PDBFile((String)options.get(2).getValue(), monitor), program);
-			LZXHelper.CleanUp();
+			String pdbPath = (String)options.get(1).getValue();
+			if(!pdbPath.equals(""))
+				h.ProcessAdditionalPDB(new PDBFile(pdbPath, monitor), program);
 		} catch (Exception e) {
 			bapROM.close();
-			LZXHelper.CleanUp();
-			throw new IOException(e);			
+			throw new Exception(e);			
 		}
 		bapROM.close();
 	}
@@ -63,7 +87,6 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 	public List<Option> getDefaultOptions(ByteProvider provider, LoadSpec loadSpec, DomainObject domainObject,
 			boolean loadIntoProgram) {
 		List<Option> list = new ArrayList<Option>();
-		list.add(new Option("Is DevKit", true));
 		list.add(new Option("Process .pdata", true));
 		list.add(new Option("Path to pdb", ""));
 		return list;

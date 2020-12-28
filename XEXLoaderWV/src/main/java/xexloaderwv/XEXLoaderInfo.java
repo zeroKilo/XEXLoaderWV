@@ -1,9 +1,6 @@
 package xexloaderwv;
 
 import java.util.List;
-
-import org.python.jline.internal.Log;
-
 import ghidra.app.util.Option;
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteArrayProvider;
@@ -35,7 +32,6 @@ public class XEXLoaderInfo {
 			imageSize = b.readInt(pos + 4);
 			pos += 8;
 			rsaSignature = b.readByteArray(pos, 256);
-			CheckRSASignature(data, pos, list);
 			pos += 256;
 			_unknown1 = b.readInt(pos);
 			imageFlags = b.readInt(pos + 4);
@@ -58,12 +54,5 @@ public class XEXLoaderInfo {
 			mediaFlags = b.readInt(pos + 4);
 			
 		}catch (Exception e) { }
-	}
-	
-	public void CheckRSASignature(byte[] data, int pos, List<Option> list)
-	{
-		//todo
-		isDevKit = (boolean)list.get(0).getValue();
-		Log.info("XEX Loader: isDevKit = " + isDevKit);
 	}
 }
