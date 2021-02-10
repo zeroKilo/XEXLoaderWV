@@ -53,16 +53,17 @@ public class PDBFile {
 		dPageBytes = b.readInt(0x20);
 		dRootBytes = b.readInt(0x2C);
 		pAdIndexPages = b.readInt(0x34);
-		int start, pos;
-		start = pos = pAdIndexPages * dPageBytes;
+		int pos;
+		pos = pAdIndexPages * dPageBytes;
 		ArrayList<Integer> pages = new ArrayList<Integer>();
-		while(pos - start < dRootBytes)
+		int count = dRootBytes / dPageBytes;
+        if ((dRootBytes / dPageBytes) != 0)
+            count++;
+		for(int i = 0; i < count; i++)
 		{
 			int v = b.readInt(pos);
 			if(v != 0)
 				pages.add(v);
-			else
-				break;
 			pos += 4;
 		}
 		ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -132,17 +133,21 @@ public class PDBFile {
 		}
 		for(int i = 0; i < count; i++)
 		{
-			RootStream rs = rootStreams.get(i);
-			int subcount = rs.size / dPageBytes;
-            if ((rs.size % dPageBytes) != 0)
-                subcount++;
-            rs.pages = new int[subcount];
-            for(int j = 0; j < subcount; j++)
-            {
-            	rs.pages[j] = b.readInt(pos);
-            	pos += 4;
-            }
-            rootStreams.set(i,  rs);
+			try
+			{
+				RootStream rs = rootStreams.get(i);
+				int subcount = rs.size / dPageBytes;
+	            if ((rs.size % dPageBytes) != 0)
+	                subcount++;
+	            rs.pages = new int[subcount];
+	            for(int j = 0; j < subcount; j++)
+	            {
+	            	rs.pages[j] = b.readInt(pos);
+	            	pos += 4;
+	            }
+	            rootStreams.set(i,  rs);
+			}
+			catch(Exception e) {}
 		}
 	}
 }

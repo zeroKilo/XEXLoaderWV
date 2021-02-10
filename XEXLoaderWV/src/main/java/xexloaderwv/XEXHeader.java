@@ -160,7 +160,7 @@ public class XEXHeader {
 		}
 	}
 	
-	public void ProcessAdditionalPDB(PDBFile pdb, Program program) throws Exception
+	public void ProcessAdditionalPDB(PDBFile pdb, Program program, TaskMonitor monitor) throws Exception
 	{
 		DOSHeader dos = new DOSHeader(peImage);
 		NTHeader nt = new NTHeader(peImage, dos.e_lfanew);
@@ -172,16 +172,26 @@ public class XEXHeader {
 				break;
 			}
 		int count = 0;
-		for(SymbolRecord sym : pdb.symbols)
+		monitor.setProgress(0);
+		monitor.setMaximum(pdb.symbols.size());
+		monitor.setMessage("Applying symbol records");
+		for(int i = 0; i < pdb.symbols.size(); i++)
+		{
+			monitor.setProgress(i);
+			SymbolRecord sym = pdb.symbols.get(i);
 			if(sym.pubsymflags == 2 && sym.rectyp == 0x110e)
 			{
 				Address addr = MakeAddress((address + sym.off) & 0xFFFFFFFFL);
 				if(addr != null)
 				{
-					SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, sym.name, SourceType.ANALYSIS);
+					int len = sym.name.length();
+					String s = sym.name.substring(0, len < 2000 ? len : 2000);
+					SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, s, SourceType.ANALYSIS);
 					count++;
 				}
-			}	
+			}
+		}
+		monitor.setProgress(0);
 		Log.info("XEX Loader: Loaded " + count + " pdb function symbols");	
 	}
 	

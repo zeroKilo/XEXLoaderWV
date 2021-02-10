@@ -75,7 +75,7 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 			h.ProcessImportLibraries(program, monitor);
 			String pdbPath = (String)options.get(1).getValue();
 			if(!pdbPath.equals(""))
-				h.ProcessAdditionalPDB(new PDBFile(pdbPath, monitor), program);
+				h.ProcessAdditionalPDB(new PDBFile(pdbPath, monitor), program, monitor);
 		} catch (Exception e) {
 			bapROM.close();
 			throw new Exception(e);			
