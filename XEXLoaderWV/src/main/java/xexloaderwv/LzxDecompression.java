@@ -179,7 +179,7 @@ public class LzxDecompression {
   {
   	InputStream in = new ByteArrayInputStream(data);
   	ByteArrayOutputStream output = new ByteArrayOutputStream();
-  	long out_bytes = data.length * 1000;
+  	long out_bytes = (long)data.length * (long)100;
   	LzxDecompression lzx = new LzxDecompression();
   	lzx.init(15, 0, data.length, out_bytes, false);
   	try
