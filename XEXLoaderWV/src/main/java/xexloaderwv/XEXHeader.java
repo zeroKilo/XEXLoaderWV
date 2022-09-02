@@ -265,6 +265,8 @@ public class XEXHeader {
 				s += (char)data[pos];
 			else
 			{
+				while(data[pos + 1] == 0 && pos < start + len - 1)
+					pos++;
 				stringTable.add(s);
 				s = "";
 			}
