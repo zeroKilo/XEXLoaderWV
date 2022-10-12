@@ -1,5 +1,5 @@
-xexloaderwv/XEXHeader.java
- xexloaderwv.XEXHeader
+xexloaderwv/ImportLibrary.java
+ xexloaderwv.ImportLibrary
 xexloaderwv/ImportRenamer.java
  xexloaderwv.ImportRenamer
  xexloaderwv.ImportRenamer$1
@@ -13,8 +13,8 @@ xexloaderwv/ImportRenamer.java
  xexloaderwv.ImportRenamer$Replacer
 xexloaderwv/XEXSection.java
  xexloaderwv.XEXSection
-xexloaderwv/XEXLoaderInfo.java
- xexloaderwv.XEXLoaderInfo
+xexloaderwv/ImportFunction.java
+ xexloaderwv.ImportFunction
 xexloaderwv/PDBFile.java
  xexloaderwv.PDBFile
  xexloaderwv.PDBFile$RootStream
@@ -25,9 +25,8 @@ xexloaderwv/BaseFileFormat.java
  xexloaderwv.BaseFileFormat$NormalCompression
 xexloaderwv/DOSHeader.java
  xexloaderwv.DOSHeader
-xexloaderwv/LzxDecompression.java
- xexloaderwv.LzxDecompression
- xexloaderwv.LzxDecompression$HuffTable
+xexloaderwv/XEXOptionalHeader.java
+ xexloaderwv.XEXOptionalHeader
 xexloaderwv/Helper.java
  xexloaderwv.Helper
 xexloaderwv/NTHeader.java
@@ -36,11 +35,14 @@ xexloaderwv/NTHeader.java
  xexloaderwv.NTHeader$ImageOptionalHeader
  xexloaderwv.NTHeader$ImageOptionalHeader$ImageDataDirectory
  xexloaderwv.NTHeader$SectionHeader
-xexloaderwv/XEXOptionalHeader.java
- xexloaderwv.XEXOptionalHeader
-xexloaderwv/ImportFunction.java
- xexloaderwv.ImportFunction
+xexloaderwv/XEXHeader.java
+ xexloaderwv.XEXHeader
+xexloaderwv/XEXLoaderInfo.java
+ xexloaderwv.XEXLoaderInfo
+xexloaderwv/XEXPatchDescriptor.java
+ xexloaderwv.XEXPatchDescriptor
 xexloaderwv/XEXLoaderWVLoader.java
  xexloaderwv.XEXLoaderWVLoader
-xexloaderwv/ImportLibrary.java
- xexloaderwv.ImportLibrary
+xexloaderwv/LzxDecompression.java
+ xexloaderwv.LzxDecompression
+ xexloaderwv.LzxDecompression$HuffTable

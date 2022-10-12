@@ -1,7 +1,5 @@
 package xexloaderwv;
 
-import java.util.List;
-import ghidra.app.util.Option;
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteArrayProvider;
 
@@ -23,7 +21,7 @@ public class XEXLoaderInfo {
 	public int     mediaFlags;
 	public boolean isDevKit;
 	   
-	public XEXLoaderInfo(byte[] data, int pos, List<Option> list)
+	public XEXLoaderInfo(byte[] data, int pos)
 	{
 		BinaryReader b = new BinaryReader(new ByteArrayProvider(data), false);		
 		try

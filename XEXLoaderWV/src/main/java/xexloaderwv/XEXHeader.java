@@ -44,8 +44,9 @@ public class XEXHeader {
 	public ArrayList<String> stringTable;
 	public ArrayList<ImportLibrary> importLibs;
 	public ArrayList<MemoryBlock> blocks = new ArrayList<MemoryBlock>();
+	public ArrayList<XEXPatchDescriptor> patchDescriptors = new ArrayList<XEXPatchDescriptor>();
 	
-	public XEXHeader(byte[] data, List<Option> list, boolean isDevKit) throws Exception
+	public XEXHeader(byte[] data, List<Option> list, boolean isDevKit, byte[] oldFileKey) throws Exception
 	{
 		BinaryReader b = new BinaryReader(new ByteArrayProvider(data), false);
 		magic = b.readInt(0);
@@ -87,14 +88,17 @@ public class XEXHeader {
 		}
 		ProcessOptionalHeaders();
 		Log.info("XEX Loader: Loading loader info");
-		loaderInfo = new XEXLoaderInfo(data, offsetSecuInfo, list);
+		loaderInfo = new XEXLoaderInfo(data, offsetSecuInfo);
 		loaderInfo.isDevKit = isDevKit;
+		if(oldFileKey != null)
+			loaderInfo.fileKey = oldFileKey;
 		DecryptFileKey();
 		Log.info("XEX Loader: Loading section info");
 		int sectionCount = b.readInt(offsetSecuInfo + 0x180);
 		for(int i=0; i < sectionCount; i++)
 			sections.add(new XEXSection(data, offsetSecuInfo + (i * 24) + 0x184));
-		ReadPEImage(data);
+		if(baseFileFormat.compression != 3)
+			ReadPEImage(data);
 	}
 	
 	public void DecryptFileKey() throws Exception
@@ -134,6 +138,9 @@ public class XEXHeader {
 				case 0x3:
 					baseFileFormat = new BaseFileFormat(sec.data);				
 					break;
+				case 0x5:
+					ReadPatchDescriptors(sec.data);
+					break;
 				case 0x80:
 					for(int i = 4; i < sec.data.length; i++)
 					{
@@ -157,6 +164,17 @@ public class XEXHeader {
 					break;
 				
 			}
+		}
+	}
+	
+	public void ReadPatchDescriptors(byte[] data) throws Exception
+	{
+		int pos = 0;
+		while(pos < data.length)
+		{
+			XEXPatchDescriptor desc = new XEXPatchDescriptor(data, pos);
+			patchDescriptors.add(desc);
+			pos += desc.size;
 		}
 	}
 	
@@ -326,7 +344,7 @@ public class XEXHeader {
 			case 1:
 				for(BaseFileFormat.BasicCompression bc : baseFileFormat.basic)
 				{
-					for(int i = 0; i < bc.dataSize; i++)
+					for(int i = 0; i < bc.dataSize && posIn + i < compressed.length; i++)
 						peImage[i + posOut] = compressed[posIn + i];
 					posOut += bc.dataSize + bc.zeroSize;
 					posIn += bc.dataSize;
@@ -422,7 +440,6 @@ public class XEXHeader {
 		}
 	}
 	
-
 	public void MakeBlock(Program program, String name, String desc, long address, InputStream s, int size, String perm, Structure struc, MessageLog log, TaskMonitor monitor)
 	{
 		try

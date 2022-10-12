@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.python.jline.internal.Log;
+
 public class LzxDecompression {
 
   private static final int LZX_MIN_MATCH = 2;
@@ -131,8 +133,8 @@ public class LzxDecompression {
       lengthTree.len[i] = 0;
   }
 
-  public void init(int window_bits, int resetInterval, int input_buffer_size, long output_length, boolean isDelta) {
-
+  public void init(int window_bits, int resetInterval, int input_buffer_size, long output_length, boolean isDelta, byte[] windowData) 
+  {
     int windowSize = 1 << window_bits;
     if (isDelta) {
       if (window_bits < 17 || window_bits > 25)
@@ -153,6 +155,13 @@ public class LzxDecompression {
     this.offset = 0;
     this.length = output_length;
     this.ref_data_size = 0;
+    if(windowData != null)
+    {
+    	int delta = windowSize - windowData.length;
+    	for(int i = 0; i < windowData.length; i++)
+    		window[i + delta] = windowData[i];
+    	this.ref_data_size = windowData.length;
+    }
     this.window_posn = 0;
     this.frame_posn = 0;
     this.frame = 0;
@@ -177,16 +186,22 @@ public class LzxDecompression {
   
   public byte[] DecompressLZX(byte[] data)
   {
+	  return DecompressLZX(data, null, data.length * 100);
+  }
+  
+  public byte[] DecompressLZX(byte[] data, byte[] windowData, long uncompressedSize)
+  {
   	InputStream in = new ByteArrayInputStream(data);
   	ByteArrayOutputStream output = new ByteArrayOutputStream();
-  	long out_bytes = (long)data.length * (long)100;
   	LzxDecompression lzx = new LzxDecompression();
-  	lzx.init(15, 0, data.length, out_bytes, false);
+  	lzx.init(15, 0, data.length, uncompressedSize, false, windowData);
   	try
   	{
-  		lzx.decompress(in, output, out_bytes);
+  		lzx.decompress(in, output, uncompressedSize);
   	}
-  	catch(Exception e) {}
+  	catch(Exception e) {
+  		Log.error(e.getMessage());
+  	}
   	return output.toByteArray();
   }
 
