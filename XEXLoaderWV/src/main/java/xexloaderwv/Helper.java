@@ -4,6 +4,8 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import ghidra.app.util.bin.BinaryReader;
+
 public class Helper {
 	public static byte[] hexStringToByteArray(String s) {
 	    int len = s.length();
@@ -22,5 +24,13 @@ public class Helper {
 		IvParameterSpec iv = new IvParameterSpec(new byte[16]);
 		cipher.init(Cipher.DECRYPT_MODE, secretKey, iv);
 		return cipher.doFinal(data);
+	}
+	
+	public static byte[] ReadArray(BinaryReader b, int pos, int len) throws Exception
+	{
+		byte[] result = new byte[len];
+		for(int i = 0; i < len; i++)
+			result[i] = b.readByte(pos + i);
+		return result;
 	}
 }

@@ -44,9 +44,9 @@ public class XEXHeader {
 	public ArrayList<String> stringTable;
 	public ArrayList<ImportLibrary> importLibs;
 	public ArrayList<MemoryBlock> blocks = new ArrayList<MemoryBlock>();
-	public ArrayList<XEXPatchDescriptor> patchDescriptors = new ArrayList<XEXPatchDescriptor>();
+	public XEXPatchDescriptor patchDescriptor;
 	
-	public XEXHeader(byte[] data, List<Option> list, boolean isDevKit, byte[] oldFileKey) throws Exception
+	public XEXHeader(byte[] data, List<Option> list, boolean isDevKit) throws Exception
 	{
 		BinaryReader b = new BinaryReader(new ByteArrayProvider(data), false);
 		magic = b.readInt(0);
@@ -90,8 +90,6 @@ public class XEXHeader {
 		Log.info("XEX Loader: Loading loader info");
 		loaderInfo = new XEXLoaderInfo(data, offsetSecuInfo);
 		loaderInfo.isDevKit = isDevKit;
-		if(oldFileKey != null)
-			loaderInfo.fileKey = oldFileKey;
 		DecryptFileKey();
 		Log.info("XEX Loader: Loading section info");
 		int sectionCount = b.readInt(offsetSecuInfo + 0x180);
@@ -139,7 +137,7 @@ public class XEXHeader {
 					baseFileFormat = new BaseFileFormat(sec.data);				
 					break;
 				case 0x5:
-					ReadPatchDescriptors(sec.data);
+					patchDescriptor = new XEXPatchDescriptor(sec.data, 0);
 					break;
 				case 0x80:
 					for(int i = 4; i < sec.data.length; i++)
@@ -164,17 +162,6 @@ public class XEXHeader {
 					break;
 				
 			}
-		}
-	}
-	
-	public void ReadPatchDescriptors(byte[] data) throws Exception
-	{
-		int pos = 0;
-		while(pos < data.length)
-		{
-			XEXPatchDescriptor desc = new XEXPatchDescriptor(data, pos);
-			patchDescriptors.add(desc);
-			pos += desc.size;
 		}
 	}
 	
@@ -332,6 +319,10 @@ public class XEXHeader {
 			case 0:
 				break;
 			case 1:
+				String s = "";
+				for(byte b : sessionKey)
+					s += String.format("%02X ", b);
+				Log.info("XEX Loader: Decrypting using key    = " + s);	
 				compressed = Helper.AESDecrypt(sessionKey, compressed);
 				break;
 			default:
@@ -349,6 +340,10 @@ public class XEXHeader {
 					posOut += bc.dataSize + bc.zeroSize;
 					posIn += bc.dataSize;
 				}
+				break;
+			case 0:
+			case 3:
+				peImage = compressed;
 				break;
 			case 2:
 				BaseFileFormat.NormalCompression nc = baseFileFormat.normal;

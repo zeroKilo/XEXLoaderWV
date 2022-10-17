@@ -160,7 +160,7 @@ public class LzxDecompression {
     	int delta = windowSize - windowData.length;
     	for(int i = 0; i < windowData.length; i++)
     		window[i + delta] = windowData[i];
-    	this.ref_data_size = windowData.length;
+    	this.ref_data_size = window.length;
     }
     this.window_posn = 0;
     this.frame_posn = 0;
@@ -237,7 +237,6 @@ public class LzxDecompression {
     long total = offset + out_bytes;
     end_frame = (int) (total / LZX_FRAME_SIZE) + (total % LZX_FRAME_SIZE > 0 ? 1 : 0);
     while (frame < end_frame) {
-      //System.out.printf("Frame %x / %x\n", frame, end_frame);
       if (reset_interval > 0 && ((frame % reset_interval) == 0)) {
         if (block_remaining > 0) {
           throw new IOException(String.format("%d bytes remaining at reset interval", block_remaining));
@@ -318,6 +317,7 @@ public class LzxDecompression {
           case LZX_BLOCKTYPE_VERBATIM:
             while (this_run > 0) {
               main_element = mainTree.readHuffSym();
+              //Log.info(String.format("-- this_run=0x%x main_element=0x%x", this_run, main_element));
               if (main_element < LZX_NUM_CHARS) {
                 window[window_posn++] = (byte) main_element;
                 this_run--;
@@ -386,10 +386,8 @@ public class LzxDecompression {
                 rundest = window_posn;
                 i = match_length;
                 if (match_offset > window_posn) {
-                  if (match_offset > offset &&
-                      (match_offset - window_posn) > ref_data_size) {
-                    throw new IOException("match offset beyond LZX stream");
-                  }
+                  if (match_offset > offset && (match_offset - window_posn) > ref_data_size) 
+                	  throw new IOException("match offset beyond LZX stream");
                   j = match_offset - window_posn;
                   if (j > window_size) {
                     throw new IOException("match offset beyond window boundaries");
@@ -746,8 +744,10 @@ public class LzxDecompression {
     return val;
   }
 
-  private int peekBits(int nbits) {
-    return bit_buffer >>> (BITBUF_WIDTH - nbits);
+  private int peekBits(int nbits) 
+  {
+  	int result = bit_buffer >>> (BITBUF_WIDTH - nbits);
+	return result;
   }
 
   private void removeBits(int nbits) {

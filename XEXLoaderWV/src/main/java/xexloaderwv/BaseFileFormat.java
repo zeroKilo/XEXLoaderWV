@@ -43,6 +43,7 @@ public class BaseFileFormat {
 				}
 				break;
 			case 2:
+			case 3:
 				normal = new NormalCompression();
 				normal.windowSize = b.readInt(0x8);
 				normal.blockSize = b.readInt(0xC);
