@@ -1,5 +1,7 @@
 package xexloaderwv;
 
+import java.nio.ByteBuffer;
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -32,5 +34,23 @@ public class Helper {
 		for(int i = 0; i < len; i++)
 			result[i] = b.readByte(pos + i);
 		return result;
+	}
+	
+	public static long forceU32(int input) throws Exception 
+	{
+	    byte[] bytes = ByteBuffer.allocate(4).putInt(input).array();
+	    long value = 
+	        ((bytes[3] & 0xFF) <<  0) |
+	        ((bytes[2] & 0xFF) <<  8) |
+	        ((bytes[1] & 0xFF) << 16) |
+	        ((long) (bytes[0] & 0xFF) << 24);
+	    return value;
+	}
+	
+	public static int forceU16(short input) throws Exception 
+	{
+	    byte[] bytes = ByteBuffer.allocate(2).putShort(input).array();
+	    int value = ((bytes[1] & 0xFF) <<  0) | ((bytes[0] & 0xFF) <<  8);
+	    return value;
 	}
 }

@@ -70,10 +70,7 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 		byte[] buffROM = provider.getInputStream(0).readAllBytes();
 		String patchPath = (String)options.get(2).getValue();
 		if(!patchPath.equals(""))
-		{
-			Log.info("XEX Loader: Applying patch");
 			buffROM = ApplyPatch(buffROM, patchPath, options, isDevKit);
-		}
 		ByteArrayProvider bapROM = new ByteArrayProvider(buffROM);
 		Log.info("XEX Loader: Loading header");
 		try {		
@@ -111,8 +108,11 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 	
 	public byte[] ApplyPatch(byte[] buffROM, String patchPath, List<Option> options, boolean isDevKit) throws Exception
 	{
+		Log.info("XEX Loader: Applying patch");
 		byte[] buffPatch = Files.readAllBytes(Path.of(patchPath));
+		Log.info("XEX Loader: ### Loading Original XEX");
 		XEXHeader orgHeader = new XEXHeader(buffROM, options, isDevKit);
+		Log.info("XEX Loader: ### Loading Patch XEX");
 		XEXHeader patchHeader = new XEXHeader(buffPatch, options, isDevKit);
 		if(patchHeader.baseFileFormat.compression == 3)
 			{
@@ -134,6 +134,7 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 				for(int i = 0; i < orgHeader.peImage.length; i++)
 					temp[i + headerSize] = orgHeader.peImage[i];
 				buffROM = temp;
+				Log.info("XEX Loader: ### Loading XEX with patched header");
 				XEXHeader newHeader = new XEXHeader(buffROM, options, isDevKit);
 				byte[] newSessionKey = newHeader.sessionKey;
 				patchHeader.sessionKey = Helper.AESDecrypt(newSessionKey, patchHeader.loaderInfo.fileKey);
@@ -155,7 +156,10 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 						switch(delta_patch.compressed_len)
 						{
 							case 0:
-								throw new Exception("delta_patch type=0 not implemented");
+								for(int i = 0; i < delta_patch.uncompressed_len; i++)
+									buffROM[headerSize + delta_patch.new_addr + i] = 0;
+								pos += 12;
+								break;
 							case 1:
 								for(int i = 0; i < delta_patch.uncompressed_len; i++)
 									buffROM[headerSize + delta_patch.new_addr + i] = buffROM[headerSize + delta_patch.old_addr + i];

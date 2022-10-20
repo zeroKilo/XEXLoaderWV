@@ -19,28 +19,30 @@ xexloaderwv/PDBFile.java
  xexloaderwv.PDBFile
  xexloaderwv.PDBFile$RootStream
  xexloaderwv.PDBFile$SymbolRecord
-xexloaderwv/BaseFileFormat.java
- xexloaderwv.BaseFileFormat
- xexloaderwv.BaseFileFormat$BasicCompression
- xexloaderwv.BaseFileFormat$NormalCompression
+xexloaderwv/XEXLoaderInfo.java
+ xexloaderwv.XEXLoaderInfo
 xexloaderwv/DOSHeader.java
  xexloaderwv.DOSHeader
 xexloaderwv/XEXOptionalHeader.java
  xexloaderwv.XEXOptionalHeader
-xexloaderwv/Helper.java
- xexloaderwv.Helper
 xexloaderwv/NTHeader.java
  xexloaderwv.NTHeader
  xexloaderwv.NTHeader$ImageFileHeader
  xexloaderwv.NTHeader$ImageOptionalHeader
  xexloaderwv.NTHeader$ImageOptionalHeader$ImageDataDirectory
  xexloaderwv.NTHeader$SectionHeader
-xexloaderwv/XEXHeader.java
- xexloaderwv.XEXHeader
-xexloaderwv/XEXLoaderInfo.java
- xexloaderwv.XEXLoaderInfo
+xexloaderwv/XEXDeltaPatch.java
+ xexloaderwv.XEXDeltaPatch
+xexloaderwv/BaseFileFormat.java
+ xexloaderwv.BaseFileFormat
+ xexloaderwv.BaseFileFormat$BasicCompression
+ xexloaderwv.BaseFileFormat$NormalCompression
+xexloaderwv/Helper.java
+ xexloaderwv.Helper
 xexloaderwv/XEXPatchDescriptor.java
  xexloaderwv.XEXPatchDescriptor
+xexloaderwv/XEXHeader.java
+ xexloaderwv.XEXHeader
 xexloaderwv/XEXLoaderWVLoader.java
  xexloaderwv.XEXLoaderWVLoader
 xexloaderwv/LzxDecompression.java
