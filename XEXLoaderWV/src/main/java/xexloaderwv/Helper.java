@@ -53,4 +53,11 @@ public class Helper {
 	    int value = ((bytes[1] & 0xFF) <<  0) | ((bytes[0] & 0xFF) <<  8);
 	    return value;
 	}
+	
+	public static long GetBits(long buff, int start, int count)
+	{
+        long result = buff >> start;
+        result &= 0xFFFFFFFFl >> 32 - count;
+        return result;
+	}
 }

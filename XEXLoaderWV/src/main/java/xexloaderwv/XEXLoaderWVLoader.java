@@ -40,9 +40,8 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 	}
 
 	@Override
-	protected void load(ByteProvider provider, LoadSpec loadSpec, List<Option> options,
-			Program program, TaskMonitor monitor, MessageLog log)
-			throws CancelledException, IOException {
+	protected void load(ByteProvider provider, LoadSpec loadSpec, List<Option> options,	Program program, TaskMonitor monitor, MessageLog log) throws CancelledException, IOException 
+	{
 			try
 			{
 				Log.info("XEX Loader: Trying to load as retail...");
@@ -61,12 +60,10 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 					throw new IOException();
 				}
 			}
-		
 	}
 	
-	public void LoadXEX(ByteProvider provider, LoadSpec loadSpec, List<Option> options,
-			Program program, TaskMonitor monitor, MessageLog log, boolean isDevKit) throws Exception
-	{
+	public void LoadXEX(ByteProvider provider, LoadSpec loadSpec, List<Option> options,	Program program, TaskMonitor monitor, MessageLog log, boolean isDevKit) throws Exception
+	{			
 		byte[] buffROM = provider.getInputStream(0).readAllBytes();
 		String patchPath = (String)options.get(2).getValue();
 		if(!patchPath.equals(""))
@@ -80,7 +77,7 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 			h.ProcessImportLibraries(program, monitor);
 			String pdbPath = (String)options.get(1).getValue();
 			if(!pdbPath.equals(""))
-				h.ProcessAdditionalPDB(new PDBFile(pdbPath, monitor), program, monitor);
+				h.ProcessAdditionalPDB(new PDBFile(pdbPath, monitor, program), program, monitor);
 		} catch (Exception e) {
 			bapROM.close();
 			throw new Exception(e);			
