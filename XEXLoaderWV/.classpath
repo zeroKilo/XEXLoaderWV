@@ -4,7 +4,7 @@
 	<classpathentry kind="src" path="src/main/help"/>
 	<classpathentry kind="src" path="src/main/resources"/>
 	<classpathentry kind="src" path="ghidra_scripts"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jdk-12.0.2"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jdk"/>
 	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Processors/68000/lib/68000.jar" sourcepath="C:/Users/wv/Desktop/ghidra/Ghidra/Processors/68000/lib/68000-src.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
@@ -40,12 +40,22 @@
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Features/Base/lib/biz.aQute.bndlib-5.1.2.jar">
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Features/Base/lib/biz.aQute.bnd.util-6.2.0.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Features/Base/lib/org.apache.felix.framework-6.0.3.jar">
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Features/Base/lib/biz.aQute.bndlib-6.2.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Features/Base/lib/org.apache.felix.framework-7.0.3.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Features/Base/lib/org.osgi.util.promise-1.2.0.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
@@ -105,22 +115,17 @@
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/Debugger-agent-dbgeng/lib/jna-5.4.0.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/Debugger-agent-dbgeng/lib/jna-platform-5.4.0.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/Debugger-agent-dbgmodel/lib/Debugger-agent-dbgmodel.jar" sourcepath="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/Debugger-agent-dbgmodel/lib/Debugger-agent-dbgmodel-src.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/Debugger-agent-dbgmodel-traceloader/lib/Debugger-agent-dbgmodel-traceloader.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/Debugger-agent-frida/lib/Debugger-agent-frida.jar" sourcepath="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/Debugger-agent-frida/lib/Debugger-agent-frida-src.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
@@ -171,16 +176,6 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Docking/lib/Docking.jar" sourcepath="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Docking/lib/Docking-src.zip">
-		<attributes>
-			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Docking/lib/javahelp-2.0.05.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Docking/lib/timingframework-1.0.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
@@ -250,17 +245,22 @@
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/FileSystem/lib/ganymed-ssh2-262.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/Framework-AsyncComm/lib/Framework-AsyncComm.jar" sourcepath="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/Framework-AsyncComm/lib/Framework-AsyncComm-src.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/Framework-Debugging/lib/Framework-Debugging.jar" sourcepath="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/Framework-Debugging/lib/Framework-Debugging-src.zip">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/Framework-Debugging/lib/jna-5.4.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/Framework-Debugging/lib/jna-platform-5.4.0.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
@@ -300,27 +300,22 @@
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Generic/lib/cglib-nodep-2.2.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Generic/lib/commons-collections4-4.1.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Generic/lib/commons-io-2.6.jar">
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Generic/lib/commons-io-2.11.0.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Generic/lib/commons-lang3-3.9.jar">
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Generic/lib/commons-lang3-3.12.0.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Generic/lib/commons-text-1.6.jar">
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Generic/lib/commons-text-1.10.0.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
@@ -330,7 +325,7 @@
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Generic/lib/gson-2.8.9.jar">
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Generic/lib/gson-2.9.0.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
@@ -445,6 +440,16 @@
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Help/lib/javahelp-2.0.05.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Help/lib/timingframework-1.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Processors/JVM/lib/JVM.jar" sourcepath="C:/Users/wv/Desktop/ghidra/Ghidra/Processors/JVM/lib/JVM-src.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
@@ -495,12 +500,17 @@
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Project/lib/commons-compress-1.19.jar">
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Project/lib/commons-compress-1.21.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Project/lib/Project.jar" sourcepath="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Project/lib/Project-src.zip">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Framework/Project/lib/xz-1.9.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
@@ -515,7 +525,7 @@
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Features/Python/lib/jython-standalone-2.7.2.jar">
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Features/Python/lib/jython-standalone-2.7.3.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>
@@ -576,6 +586,11 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Processors/SuperH4/lib/SuperH4.jar" sourcepath="C:/Users/wv/Desktop/ghidra/Ghidra/Processors/SuperH4/lib/SuperH4-src.zip">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/TaintAnalysis/lib/TaintAnalysis.jar" sourcepath="C:/Users/wv/Desktop/ghidra/Ghidra/Debug/TaintAnalysis/lib/TaintAnalysis-src.zip">
 		<attributes>
 			<attribute name="javadoc_location" value="jar:file:/C:\Users\wv\Desktop\ghidra\docs\GhidraAPI_javadoc.zip!/api/"/>
 		</attributes>

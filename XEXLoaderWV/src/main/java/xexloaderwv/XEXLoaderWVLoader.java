@@ -65,7 +65,7 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 	public void LoadXEX(ByteProvider provider, LoadSpec loadSpec, List<Option> options,	Program program, TaskMonitor monitor, MessageLog log, boolean isDevKit) throws Exception
 	{			
 		byte[] buffROM = provider.getInputStream(0).readAllBytes();
-		String patchPath = (String)options.get(2).getValue();
+		String patchPath = (String)options.get(4).getValue();
 		if(!patchPath.equals(""))
 			buffROM = ApplyPatch(buffROM, patchPath, options, isDevKit);
 		ByteArrayProvider bapROM = new ByteArrayProvider(buffROM);
@@ -77,7 +77,7 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 			h.ProcessImportLibraries(program, monitor);
 			String pdbPath = (String)options.get(1).getValue();
 			if(!pdbPath.equals(""))
-				h.ProcessAdditionalPDB(new PDBFile(pdbPath, monitor, program), program, monitor);
+				h.ProcessAdditionalPDB(new PDBFile(pdbPath, monitor, program), program, monitor, (boolean)options.get(2).getValue(), (boolean)options.get(3).getValue());
 		} catch (Exception e) {
 			bapROM.close();
 			throw new Exception(e);			
@@ -187,7 +187,9 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 			boolean loadIntoProgram) {
 		List<Option> list = new ArrayList<Option>();
 		list.add(new Option("Process .pdata", true));
-		list.add(new Option("Path to pdb", ""));
+		list.add(new Option("Path to PDB", ""));
+		list.add(new Option("PDB Load types", true));
+		list.add(new Option("PDB Load symbols", true));
 		list.add(new Option("Path to xexp", ""));
 		return list;
 	}

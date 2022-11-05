@@ -165,39 +165,47 @@ public class XEXHeader {
 		}
 	}
 	
-	public void ProcessAdditionalPDB(PDBFile pdb, Program program, TaskMonitor monitor) throws Exception
+	public void ProcessAdditionalPDB(PDBFile pdb, Program program, TaskMonitor monitor, boolean loadTypes, boolean loadSymbols) throws Exception
 	{
-		DOSHeader dos = new DOSHeader(peImage);
-		NTHeader nt = new NTHeader(peImage, dos.e_lfanew);
-		int address = imageBaseAddress;
-		for(NTHeader.SectionHeader sec : nt.secHeaders)
-			if(sec.Name.equals(".text"))
-			{
-				address += sec.VirtualAddress;
-				break;
-			}
-		int count = 0;
-		monitor.setProgress(0);
-		monitor.setMaximum(pdb.symbols.size());
-		monitor.setMessage("Applying symbol records");
-		for(int i = 0; i < pdb.symbols.size(); i++)
+
+		if(loadTypes)
+			pdb.tpi.ImportTypeRecords(program, monitor);
+		if(loadSymbols)
 		{
-			monitor.setProgress(i);
-			SymbolRecord sym = pdb.symbols.get(i);
-			if(sym.pubsymflags == 2 && sym.rectyp == 0x110e)
-			{
-				Address addr = MakeAddress((address + sym.off) & 0xFFFFFFFFL);
-				if(addr != null)
+			DOSHeader dos = new DOSHeader(peImage);
+			NTHeader nt = new NTHeader(peImage, dos.e_lfanew);
+			int address = imageBaseAddress;
+			for(NTHeader.SectionHeader sec : nt.secHeaders)
+				if(sec.Name.equals(".text"))
 				{
-					int len = sym.name.length();
-					String s = sym.name.substring(0, len < 2000 ? len : 2000);
-					SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, s, SourceType.ANALYSIS);
-					count++;
+					address += sec.VirtualAddress;
+					break;
+				}
+			int count = 0;
+			monitor.setProgress(0);
+			monitor.setMaximum(pdb.symbols.size());
+			monitor.setMessage("Applying symbol records");
+			for(int i = 0; i < pdb.symbols.size(); i++)
+			{
+				if(monitor.isCancelled())
+					return;
+				monitor.setProgress(i);
+				SymbolRecord sym = pdb.symbols.get(i);
+				if(sym.pubsymflags == 2 && sym.rectyp == 0x110e)
+				{
+					Address addr = MakeAddress((address + sym.off) & 0xFFFFFFFFL);
+					if(addr != null)
+					{
+						int len = sym.name.length();
+						String s = sym.name.substring(0, len < 2000 ? len : 2000);
+						SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, s, SourceType.ANALYSIS);
+						count++;
+					}
 				}
 			}
+			monitor.setProgress(0);
+			Log.info("XEX Loader: Loaded " + count + " pdb function symbols");	
 		}
-		monitor.setProgress(0);
-		Log.info("XEX Loader: Loaded " + count + " pdb function symbols");	
 	}
 	
 	public void ProcessImportLibraries(Program program, TaskMonitor monitor) throws Exception

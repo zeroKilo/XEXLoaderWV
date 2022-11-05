@@ -162,6 +162,53 @@ public class TypeRecord {
         }
     }
 	
+	public enum PointerType
+    {
+		PTR_BASE_SEG 		("PTR_BASE_SEG", 0x03),
+		PTR_BASE_VAL 		("PTR_BASE_VAL", 0x04),
+		PTR_BASE_SEGVAL 	("PTR_BASE_SEGVAL", 0x05),
+		PTR_BASE_ADDR 		("PTR_BASE_ADDR", 0x06),
+		PTR_BASE_SEGADDR 	("PTR_BASE_SEGADDR", 0x07),
+		PTR_BASE_TYPE 		("PTR_BASE_TYPE", 0x08),
+		PTR_BASE_SELF 		("PTR_BASE_SELF", 0x09),
+		PTR_NEAR32 			("PTR_NEAR32", 0x0a),
+		PTR_64 				("PTR_64", 0x0c),
+		PTR_UNUSEDPTR 		("PTR_UNUSEDPTR", 0x0d);
+		private final String name;
+        private final long value;
+        private PointerType(String name, long value) { this.name = name; this.value = value; } 
+        public String getName() { return name; }
+        public long getValue() { return value; }
+        public static PointerType getByValue(long l)
+        {
+        	for(PointerType p : PointerType.values())
+        		if(p.value == l)
+        			return p;
+        	return null;
+        }
+    }
+	
+	public enum PointerMode
+    {
+		PTR_MODE_PTR 		("PTR_MODE_PTR", 0x00),
+		PTR_MODE_REF 		("PTR_MODE_REF", 0x01),
+		PTR_MODE_PMEM 		("PTR_MODE_PMEM", 0x02),
+		PTR_MODE_PMFUNC 	("PTR_MODE_PMFUNC", 0x03),
+		PTR_MODE_RESERVED 	("PTR_MODE_RESERVED", 0x04);
+		private final String name;
+        private final long value;
+        private PointerMode(String name, long value) { this.name = name; this.value = value; } 
+        public String getName() { return name; }
+        public long getValue() { return value; }
+        public static PointerMode getByValue(long l)
+        {
+        	for(PointerMode p : PointerMode.values())
+        		if(p.value == l)
+        			return p;
+        	return null;
+        }
+    }
+	
 	public enum BasicTypes
     {
 		T_NOTYPE        ("T_NOTYPE", 0x0000),
@@ -479,7 +526,7 @@ public class TypeRecord {
 	
 	public abstract class LeafRecord
     { 
-		public DataType dataType;
+		public DataType dataType = null;
     }
 	
 	public abstract class MemberRecord
@@ -623,6 +670,28 @@ public class TypeRecord {
 		}
 	}
 	
+	public class LeafPointerAttr
+    {
+		public PointerType ptrtype;
+        public PointerMode ptrmode;
+        public boolean isflat32;
+        public boolean isvolatile;
+        public boolean isconst;
+        public boolean isunaligned;
+        public boolean isrestrict;        
+        public int _raw;
+        public LeafPointerAttr(long attr)
+        {
+			ptrtype = PointerType.getByValue(Helper.GetBits(attr, 0, 5));
+            ptrmode = PointerMode.getByValue(Helper.GetBits(attr, 5, 3));
+            isflat32 = Helper.GetBits(attr, 8, 1) != 0;
+            isvolatile = Helper.GetBits(attr, 9, 1) != 0;
+            isconst = Helper.GetBits(attr, 10, 1) != 0;
+            isunaligned = Helper.GetBits(attr, 11, 1) != 0;
+            isrestrict = Helper.GetBits(attr, 12, 1) != 0;
+        }		
+    }
+	
 	public class MR_Enumerate extends MemberRecord
 	{
 		public FieldAttribute attr;
@@ -633,7 +702,7 @@ public class TypeRecord {
 			recordKind = MemberRecordKind.LF_ENUMERATE;
 			attr = new FieldAttribute(b.readUnsignedShort(pos));
 			val = new Value(b, pos + 2);
-			name = b.readTerminatedString(pos + 2 + val._rawSize, '\0');
+			name = Helper.ReadCString(b, pos + 2 + val._rawSize);
 		}
 
 		@Override
@@ -655,7 +724,7 @@ public class TypeRecord {
 			attr = new FieldAttribute(b.readUnsignedShort(pos));
 			index = b.readUnsignedInt(pos + 2);
 			offset = new Value(b, pos + 6);
-			name = b.readTerminatedString(pos + 6 + offset._rawSize, '\0');
+			name = Helper.ReadCString(b, pos + 6 + offset._rawSize);
 		}
 
 		@Override
@@ -672,7 +741,8 @@ public class TypeRecord {
 			BinaryReader b = new BinaryReader(new ByteArrayProvider(data), true);
 			long pos = 0;
 			records = new ArrayList<TypeRecord.MemberRecord>();
-			while(pos < data.length)
+			boolean exit = false;
+			while(pos < data.length && !exit)
 			{
 				MemberRecordKind k = MemberRecordKind.getByValue(b.readUnsignedShort(pos));
 				if(k == null)
@@ -690,8 +760,9 @@ public class TypeRecord {
 						pos += mr_m.GetSize();
 						records.add(mr_m);
 						break;
-					default:
-						return;
+					default:	
+						exit = true;
+						break;
 				}
 				while((pos % 4) != 0)
 					pos++;
@@ -714,7 +785,7 @@ public class TypeRecord {
 			property = new Property(b.readUnsignedShort(2));
 			utype = b.readUnsignedInt(4);
 			field = b.readUnsignedInt(8);
-			name = b.readTerminatedString(12, '\0');
+			name = Helper.ReadCString(b, 12);
 		}
 	}
 	
@@ -737,7 +808,20 @@ public class TypeRecord {
             derived = b.readUnsignedInt(8);
             vshape = b.readUnsignedInt(12);
             val = new Value(b, 16);
-            name = b.readTerminatedString(16 + val._rawSize, '\0');
+            name = Helper.ReadCString(b, 16 + val._rawSize);
+		}
+	}
+	
+	public class LR_Pointer extends LeafRecord
+	{
+		public long type;
+        public LeafPointerAttr attr;
+		
+		public LR_Pointer(byte[] data) throws Exception
+		{
+			BinaryReader b = new BinaryReader(new ByteArrayProvider(data), true);
+			type = b.readUnsignedInt(0);
+			attr = new LeafPointerAttr(b.readUnsignedInt(4));
 		}
 	}
 	
@@ -760,6 +844,9 @@ public class TypeRecord {
 					break;
 				case LF_STRUCTURE:
 					record = new LR_Structure(data);
+					break;
+				case LF_POINTER:
+					record = new LR_Pointer(data);
 					break;
 				default:
 					break;
