@@ -524,6 +524,88 @@ public class TypeRecord {
         }
     }
 	
+	public enum CallType
+    {
+		NEAR_C 			("NEAR_C", 0x00000000),
+		FAR_C 			("FAR_C", 0x00000001),
+		NEAR_PASCAL 	("NEAR_PASCAL", 0x00000002),
+		FAR_PASCAL 		("FAR_PASCAL", 0x00000003),
+		NEAR_FAST 		("NEAR_FAST", 0x00000004),
+		FAR_FAST 		("FAR_FAST", 0x00000005),
+		SKIPPED 		("SKIPPED", 0x00000006),
+		NEAR_STD 		("NEAR_STD", 0x00000007),
+		FAR_STD 		("FAR_STD", 0x00000008),
+		NEAR_SYS 		("NEAR_SYS", 0x00000009),
+		FAR_SYS 		("FAR_SYS", 0x0000000A),
+		THISCALL 		("THISCALL", 0x0000000B),
+		MIPSCALL 		("MIPSCALL", 0x0000000C),
+		GENERIC 		("GENERIC", 0x0000000D),
+		ALPHACALL 		("ALPHACALL", 0x0000000E),
+		PPCCALL 		("PPCCALL", 0x0000000F),
+		SHCALL 			("SHCALL", 0x00000010),
+		ARMCALL 		("ARMCALL", 0x00000011),
+		AM33CALL 		("AM33CALL", 0x00000012),
+		TRICALL 		("TRICALL", 0x00000013),
+		SH5CALL 		("SH5CALL", 0x00000014),
+		M32RCALL 		("M32RCALL", 0x00000015),
+		RESERVED 		("RESERVED", 0x00000016);
+		private final String name;
+        private final long value;
+        private CallType(String name, long value) { this.name = name; this.value = value; } 
+        public String getName() { return name; }
+        public long getValue() { return value; }
+        public static CallType getByValue(long l)
+        {
+        	for(CallType ct : CallType.values())
+        		if(ct.value == l)
+        			return ct;
+        	return null;
+        }
+    }
+	
+	public enum ModAttr
+    {
+		MOD_const  		("MOD_const", 0x00000001),
+		MOD_volatile 	("MOD_volatile", 0x00000002),
+		MOD_unaligned	("MOD_unaligned", 0x00000004);
+		private final String name;
+        private final long value;
+        private ModAttr(String name, long value) { this.name = name; this.value = value; } 
+        public String getName() { return name; }
+        public long getValue() { return value; }
+        public static ModAttr getByValue(long l)
+        {
+        	for(ModAttr m : ModAttr.values())
+        		if(m.value == l)
+        			return m;
+        	return null;
+        }
+    }
+	
+	public enum Shape
+    {
+		near 	("near", 0x00),
+		far 	("far", 0x01),
+		thin 	("thin", 0x02),
+		outer 	("outer", 0x03),
+		meta 	("meta", 0x04),
+		near32 	("near32", 0x05),
+		far32 	("far32", 0x06),
+		unused 	("unused", 0x07);
+		private final String name;
+        private final long value;
+        private Shape(String name, long value) { this.name = name; this.value = value; } 
+        public String getName() { return name; }
+        public long getValue() { return value; }
+        public static Shape getByValue(long l)
+        {
+        	for(Shape s : Shape.values())
+        		if(s.value == l)
+        			return s;
+        	return null;
+        }
+    }	
+	
 	public abstract class LeafRecord
     { 
 		public DataType dataType = null;
@@ -824,6 +906,209 @@ public class TypeRecord {
 			attr = new LeafPointerAttr(b.readUnsignedInt(4));
 		}
 	}
+
+	public class LR_Array extends LeafRecord
+	{
+		public long elemtype;
+	    public long idxtype;
+	    public Value val;
+	    public String name;
+		
+		public LR_Array(byte[] data) throws Exception
+		{
+			BinaryReader b = new BinaryReader(new ByteArrayProvider(data), true);
+			elemtype = b.readUnsignedInt(0);
+			idxtype = b.readUnsignedInt(4);
+			val = new Value(b, 8);
+			name = Helper.ReadCString(b, 8 + val._rawSize);			
+		}
+	}
+
+	public class LR_Bitfield extends LeafRecord
+	{
+		public long type;
+        public int length;
+        public int position;
+		
+		public LR_Bitfield(byte[] data) throws Exception
+		{
+			BinaryReader b = new BinaryReader(new ByteArrayProvider(data), true);
+			type = b.readUnsignedInt(0);
+			length = b.readUnsignedByte(4);
+			position = b.readUnsignedByte(5);
+		}
+	}
+
+	public class LR_Union extends LeafRecord
+	{
+		public int count;
+        public Property property;
+        public long field;
+        public Value val;
+        public String name;
+		
+		public LR_Union(byte[] data) throws Exception
+		{
+			BinaryReader b = new BinaryReader(new ByteArrayProvider(data), true);
+			count = b.readUnsignedShort(0);
+			property = new Property(b.readUnsignedShort(2));
+			field = b.readUnsignedInt(4);
+			val = new Value(b, 8);
+			name = Helper.ReadCString(b, 8 + val._rawSize);
+		}
+	}
+
+	public class LR_ArgList extends LeafRecord
+	{
+        public long count;
+        public long[] arg;
+		
+		public LR_ArgList(byte[] data) throws Exception
+		{
+			BinaryReader b = new BinaryReader(new ByteArrayProvider(data), true);
+			count = b.readUnsignedInt(0);
+			arg = new long[(int)count];
+			for(int i = 0; i < count; i++)
+				arg[i] = b.readUnsignedInt(i * 4 + 4);
+		}
+	}
+
+	public class LR_Procedure extends LeafRecord
+	{
+		public long rvtype;
+        public int calltype;
+        public int reserved;
+        public int parmcount;
+        public long arglist;
+		
+		public LR_Procedure(byte[] data) throws Exception
+		{
+			BinaryReader b = new BinaryReader(new ByteArrayProvider(data), true);
+			rvtype = b.readUnsignedInt(0);
+			calltype = b.readUnsignedByte(4);
+			reserved = b.readUnsignedByte(5);
+			parmcount = b.readUnsignedShort(6);
+			arglist = b.readUnsignedInt(8);
+		}
+	}
+
+	public class LR_MemberFunction extends LeafRecord
+	{
+		public long rvtype;
+        public long classtype;
+        public long thistype;
+        public CallType calltype;
+        public int reserved;
+        public int parmcount;
+        public long arglist;
+		
+		public LR_MemberFunction(byte[] data) throws Exception
+		{
+			BinaryReader b = new BinaryReader(new ByteArrayProvider(data), true);
+			rvtype = b.readUnsignedInt(0);
+			classtype = b.readUnsignedInt(4);
+			thistype = b.readUnsignedInt(8);
+			calltype = CallType.getByValue(b.readUnsignedByte(12));
+			reserved = b.readUnsignedByte(13);
+			parmcount = b.readUnsignedShort(14);
+			arglist = b.readUnsignedInt(16);
+		}
+	}
+
+	public class LR_Modifier extends LeafRecord
+	{
+        public long type;
+        public ModAttr attr;
+		
+		public LR_Modifier(byte[] data) throws Exception
+		{
+			BinaryReader b = new BinaryReader(new ByteArrayProvider(data), true);
+			type = b.readUnsignedInt(0);
+			attr = ModAttr.getByValue(b.readUnsignedShort(4));
+		}
+	}
+
+	public class LR_MethodList extends LeafRecord
+	{
+        public class Method
+        {
+            public FieldAttribute attr;
+            public long index;
+            public long vbaseoff;
+            public int _rawSize;
+            public Method(BinaryReader b, int pos) throws Exception
+            {
+                attr = new FieldAttribute(b.readUnsignedShort(pos));
+                index = b.readUnsignedInt(pos + 4);
+                _rawSize = 8;
+                if(attr.mprop == MProp.MTintro || attr.mprop == MProp.MTpureintro)
+                {
+                    vbaseoff = b.readUnsignedInt(pos + 8);
+                	_rawSize = 12;
+                }
+            }
+        }
+        
+        public ArrayList<Method> methods;
+		
+		public LR_MethodList(byte[] data) throws Exception
+		{
+			BinaryReader b = new BinaryReader(new ByteArrayProvider(data), true);
+			methods = new ArrayList<Method>();
+			int pos = 0;
+			while(pos < data.length)
+			{
+				Method m = new Method(b, pos);
+				pos += m._rawSize;
+				methods.add(m);
+			}
+		}
+	}
+	
+	public class LR_VTShape extends LeafRecord
+	{
+		public ArrayList<Shape> shapes;
+		
+		public LR_VTShape(byte[] data) throws Exception
+		{
+			BinaryReader b = new BinaryReader(new ByteArrayProvider(data), true);
+			int count = b.readUnsignedShort(0);
+			int bcount = count / 2;
+			if((count % 2) != 0)
+				bcount++;
+			shapes = new ArrayList<Shape>();
+			for(int i = 0; i < bcount; i++)
+			{
+				int d = b.readUnsignedByte(2 + i);
+				shapes.add(Shape.getByValue(d >> 4));
+				if(shapes.size() == count)
+					break;
+				shapes.add(Shape.getByValue(d & 0xf));
+			}
+		}
+	}
+	
+	public class LR_Class extends LeafRecord
+	{		
+        public int count;
+        public Property property;
+        public long field;
+        public long derived;
+        public long vshape;
+        public Value val;
+        public String name;
+		public LR_Class(byte[] data) throws Exception
+		{
+			BinaryReader b = new BinaryReader(new ByteArrayProvider(data), true);
+			count = b.readUnsignedShort(0);
+			property = new Property(b.readUnsignedShort(2));
+			field = b.readUnsignedInt(4);
+			derived = b.readUnsignedInt(8);
+			vshape = b.readUnsignedInt(12);
+			val = new Value(b, 16);
+			name = Helper.ReadCString(b, 16 + val._rawSize);
+		}
+	}
 	
     public long typeID;
 	public LeafRecordKind kind;
@@ -848,7 +1133,38 @@ public class TypeRecord {
 				case LF_POINTER:
 					record = new LR_Pointer(data);
 					break;
+				case LF_ARRAY:
+					record = new LR_Array(data);
+					break;
+				case LF_BITFIELD:
+					record = new LR_Bitfield(data);
+					break;
+				case LF_UNION:
+					record = new LR_Union(data);
+					break;
+				case LF_ARGLIST:
+					record = new LR_ArgList(data);
+					break;
+				case LF_PROCEDURE:
+					record = new LR_Procedure(data);
+					break;
+				case LF_MFUNCTION:
+					record = new LR_MemberFunction(data);
+					break;
+				case LF_MODIFIER:
+					record = new LR_Modifier(data);
+					break;
+				case LF_METHODLIST:
+					record = new LR_MethodList(data);		
+					break;
+				case LF_VTSHAPE:
+					record = new LR_VTShape(data);
+					break;
+				case LF_CLASS:
+					record = new LR_Class(data);
+					break;
 				default:
+					record = null;
 					break;
 			}
 	}
