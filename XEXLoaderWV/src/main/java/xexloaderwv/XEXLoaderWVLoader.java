@@ -1,5 +1,6 @@
 package xexloaderwv;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -7,8 +8,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import javax.swing.SwingConstants;
+
 import org.python.jline.internal.Log;
 
+import ghidra.app.plugin.core.analysis.AutoAnalysisManager;
+import ghidra.app.services.DataTypeManagerService;
 import ghidra.app.util.Option;
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteArrayProvider;
@@ -20,7 +25,11 @@ import ghidra.framework.model.DomainObject;
 import ghidra.program.model.lang.LanguageCompilerSpecPair;
 import ghidra.program.model.listing.Program;
 import ghidra.util.exception.CancelledException;
+import ghidra.util.task.TaskBuilder;
+import ghidra.util.task.TaskLauncher;
 import ghidra.util.task.TaskMonitor;
+import pdb.symbolserver.ui.LoadPdbDialog;
+import pdb.symbolserver.ui.LoadPdbDialog.LoadPdbResults;
 
 public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 
@@ -65,7 +74,7 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 	public void LoadXEX(ByteProvider provider, LoadSpec loadSpec, List<Option> options,	Program program, TaskMonitor monitor, MessageLog log, boolean isDevKit) throws Exception
 	{			
 		byte[] buffROM = provider.getInputStream(0).readAllBytes();
-		String patchPath = (String)options.get(4).getValue();
+		String patchPath = (String)options.get(3).getValue();
 		if(!patchPath.equals(""))
 			buffROM = ApplyPatch(buffROM, patchPath, options, isDevKit);
 		ByteArrayProvider bapROM = new ByteArrayProvider(buffROM);
@@ -75,14 +84,30 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 			boolean processPData = (boolean)options.get(0).getValue();
 			h.ProcessPEImage(program, monitor, log, processPData);
 			h.ProcessImportLibraries(program, monitor);
-			String pdbPath = (String)options.get(1).getValue();
-			if(!pdbPath.equals(""))
-				h.ProcessAdditionalPDB(new PDBFile(pdbPath, monitor, program), program, monitor, (boolean)options.get(2).getValue(), (boolean)options.get(3).getValue());
+			if((boolean)options.get(1).getValue())
+				LoadPDB(program, monitor, (boolean)options.get(2).getValue(), h);
 		} catch (Exception e) {
 			bapROM.close();
 			throw new Exception(e);			
 		}
 		bapROM.close();
+	}
+	
+	public void LoadPDB(Program program, TaskMonitor monitor, boolean useExperimental, XEXHeader h) throws Exception
+	{
+		LoadPdbResults loadPdbResults = LoadPdbDialog.choosePdbForProgram(program);
+		if (loadPdbResults == null || loadPdbResults.pdbFile == null) 
+			return;
+		File pdbFile = loadPdbResults.pdbFile;
+		if(!useExperimental)
+		{
+			DataTypeManagerService dataTypeManagerService = AutoAnalysisManager.getAnalysisManager(program).getDataTypeManagerService();
+			LoadPdbTask loadPdbTask = new LoadPdbTask(program, pdbFile, loadPdbResults.useMsDiaParser, loadPdbResults.control, dataTypeManagerService);
+			TaskBuilder.withTask(loadPdbTask).setStatusTextAlignment(SwingConstants.LEADING).setLaunchDelay(0);
+			new TaskLauncher(loadPdbTask, null, 0);
+		}
+		else
+			h.ProcessAdditionalPDB(new PDBFile(pdbFile.getPath(), monitor, program), program, monitor, true, true);
 	}
 	
 	public byte[] ChangeBaseFileFormat(byte[] image) throws Exception
@@ -187,9 +212,8 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 			boolean loadIntoProgram) {
 		List<Option> list = new ArrayList<Option>();
 		list.add(new Option("Process .pdata", true));
-		list.add(new Option("Path to PDB", ""));
-		list.add(new Option("PDB Load types", true));
-		list.add(new Option("PDB Load symbols", true));
+		list.add(new Option("Load PDB File", false));
+		list.add(new Option("use experimental PDB loader", false));
 		list.add(new Option("Path to xexp", ""));
 		return list;
 	}

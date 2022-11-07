@@ -25,8 +25,11 @@ import ghidra.program.model.listing.Program;
 import ghidra.util.task.TaskMonitor;
 import xexloaderwv.TypeRecord.BasicTypes;
 import xexloaderwv.TypeRecord.LR_Array;
+import xexloaderwv.TypeRecord.LR_Bitfield;
 import xexloaderwv.TypeRecord.LR_Enum;
 import xexloaderwv.TypeRecord.LR_Structure;
+import xexloaderwv.TypeRecord.LR_Union;
+import xexloaderwv.TypeRecord.LeafRecordKind;
 import xexloaderwv.TypeRecord.MR_Member;
 
 public class TPIStream {
@@ -67,6 +70,13 @@ public class TPIStream {
     public long HashAdjBufferOffset;
     public long HashAdjBufferLength;
     public ArrayList<TypeRecord> typeRecords;
+    
+    
+    
+
+	HashMap<String, StructureDataType> structMap;
+	HashMap<String, StructureDataType> classMap;
+	HashMap<String, UnionDataType> unionMap;
 	
 	
 	public TPIStream(byte[] data, TaskMonitor monitor) throws Exception
@@ -110,9 +120,26 @@ public class TPIStream {
 	    Log.info(String.format("XEX Loader: Processed %d type records", typeRecords.size()));
 	}
 	
+	public class FieldMemberEntry
+	{
+		public long offset;
+		public DataType type;
+		public String name;
+		public String comment;
+		public boolean isBitField;
+		
+		public FieldMemberEntry(long o, DataType t, String n, String c, boolean isB)
+		{
+			offset = o;
+			type = t;
+			name = n;
+			comment = c;
+			isBitField = isB;
+		}
+	}
+	
 	public void ImportTypeRecords(Program program, TaskMonitor monitor) throws Exception
 	{
-
 		long countEnums = 0;
 		long countStructures = 0;
 		long countArrays = 0;
@@ -122,9 +149,9 @@ public class TPIStream {
 		monitor.setMaximum(typeRecords.size());
 		monitor.setMessage("Loading type records");
 		long counter = 0;
-		HashMap<String, StructureDataType> structMap = new HashMap<String, StructureDataType>();
-		HashMap<String, StructureDataType> classMap = new HashMap<String, StructureDataType>();
-		HashMap<String, UnionDataType> unionMap = new HashMap<String, UnionDataType>();
+		structMap = new HashMap<String, StructureDataType>();
+		classMap = new HashMap<String, StructureDataType>();
+		unionMap = new HashMap<String, UnionDataType>();
 		for(TypeRecord rec : typeRecords)
 		{
 			if(monitor.isCancelled())
@@ -137,7 +164,7 @@ public class TPIStream {
 						countEnums++;					
 					break;
 				case LF_STRUCTURE:
-					if(AddStructureType((TypeRecord.LR_Structure)rec.record, structMap))
+					if(AddStructureType((TypeRecord.LR_Structure)rec.record))
 						countStructures++;					
 					break;
 				case LF_ARRAY:
@@ -145,11 +172,11 @@ public class TPIStream {
 						countArrays++;
 					break;
 				case LF_UNION:
-					if(AddUnionType((TypeRecord.LR_Union)rec.record, unionMap))
+					if(AddUnionType((TypeRecord.LR_Union)rec.record))
 						countUnions++;
 					break;
 				case LF_CLASS:
-					if(AddClassType((TypeRecord.LR_Class)rec.record, classMap))
+					if(AddClassType((TypeRecord.LR_Class)rec.record))
 						countClasses++;	
 					break;
 				default:
@@ -167,43 +194,36 @@ public class TPIStream {
 	    						countClasses));
 	}
 	
-	private boolean AddClassType(TypeRecord.LR_Class clazz, HashMap<String, StructureDataType> classMap)
+	private boolean AddClassType(TypeRecord.LR_Class clazz)
 	{
 		try
 		{
-			StructureDataType newStruct;
+			StructureDataType newClass;
 			if(classMap.containsKey(clazz.name))
-				newStruct = classMap.get(clazz.name);
+				newClass = classMap.get(clazz.name);
 			else
 			{
-				newStruct = new StructureDataType(clazz.name, 0);
-				newStruct.setPackingEnabled(true);
-				classMap.put(clazz.name, newStruct);
+				newClass = new StructureDataType(clazz.name, 0);
+				newClass.setPackingEnabled(true);
+				classMap.put(clazz.name, newClass);
 			}
 			if(clazz.field != 0)
 				for(TypeRecord rec : typeRecords)
 					if(rec.typeID == clazz.field)
 					{
 						TypeRecord.LR_FieldList fieldList = (TypeRecord.LR_FieldList)rec.record;
-						for(TypeRecord.MemberRecord mr : fieldList.records)
-							switch(mr.recordKind)
-							{
-								case LF_MEMBER:
-									MR_Member member = (MR_Member)mr;
-									DataType dt = GetDataTypeByIndex(member.index);
-									String name = GetDataTypeNameByIndex(member.index);
-									if(dt != null && name != null)
-										newStruct.add(dt, member.name, "//" + name);
-									else
-										return false;
-									break;
-								default:				
-									return false;
-							}
+						ArrayList<FieldMemberEntry> entries = GetFieldListMembers(fieldList);
+						if(entries == null)
+							return false;
+						for(FieldMemberEntry e : entries)
+							if(!e.isBitField)
+								newClass.add(e.type, e.name, e.comment);
+							else
+								newClass.addBitField(e.type, (int)e.offset, e.name, e.comment);
 						break;
 					}
-			newStruct.repack();
-			clazz.dataType = newStruct;
+			newClass.repack();
+			clazz.dataType = newClass;
 			return true;
 		}
 		catch (Exception e)
@@ -212,7 +232,7 @@ public class TPIStream {
 		}
 	}	
 	
-	private boolean AddUnionType(TypeRecord.LR_Union union, HashMap<String, UnionDataType> unionMap)
+	private boolean AddUnionType(TypeRecord.LR_Union union)
 	{
 		try
 		{
@@ -230,23 +250,16 @@ public class TPIStream {
 					if(rec.typeID == union.field)
 					{
 						TypeRecord.LR_FieldList fieldList = (TypeRecord.LR_FieldList)rec.record;
-						for(TypeRecord.MemberRecord mr : fieldList.records)
-							switch(mr.recordKind)
-							{
-								case LF_MEMBER:
-									MR_Member member = (MR_Member)mr;
-									DataType dt = GetDataTypeByIndex(member.index);
-									String name = GetDataTypeNameByIndex(member.index);
-									if(dt != null && name != null)
-										newUnion.add(dt, member.name, "//" + name);
-									else
-										return false;
-									break;
-								default:				
-									return false;
-							}
+						ArrayList<FieldMemberEntry> entries = GetFieldListMembers(fieldList);
+						if(entries == null)
+							return false;
+						for(FieldMemberEntry e : entries)
+							if(!e.isBitField)
+								newUnion.add(e.type, e.name, e.comment);
+							else
+								newUnion.addBitField(e.type, (int)e.offset, e.name, e.comment);
 						break;
-					}
+					}			
 			newUnion.repack();
 			union.dataType = newUnion;
 			return true;
@@ -257,7 +270,7 @@ public class TPIStream {
 		}
 	}
 	
-	private boolean AddStructureType(TypeRecord.LR_Structure str, HashMap<String, StructureDataType> structMap)
+	private boolean AddStructureType(TypeRecord.LR_Structure str)
 	{
 		try
 		{
@@ -275,21 +288,14 @@ public class TPIStream {
 					if(rec.typeID == str.field)
 					{
 						TypeRecord.LR_FieldList fieldList = (TypeRecord.LR_FieldList)rec.record;
-						for(TypeRecord.MemberRecord mr : fieldList.records)
-							switch(mr.recordKind)
-							{
-								case LF_MEMBER:
-									MR_Member member = (MR_Member)mr;
-									DataType dt = GetDataTypeByIndex(member.index);
-									String name = GetDataTypeNameByIndex(member.index);
-									if(dt != null && name != null)
-										newStruct.add(dt, member.name, "//" + name);
-									else
-										return false;
-									break;
-								default:				
-									return false;
-							}
+						ArrayList<FieldMemberEntry> entries = GetFieldListMembers(fieldList);
+						if(entries == null)
+							return false;
+						for(FieldMemberEntry e : entries)
+							if(!e.isBitField)
+								newStruct.add(e.type, e.name, e.comment);
+							else
+								newStruct.addBitField(e.type, (int)e.offset, e.name, e.comment);
 						break;
 					}
 			newStruct.repack();
@@ -301,6 +307,65 @@ public class TPIStream {
 			return false;			
 		}
 	}	
+	
+	private ArrayList<FieldMemberEntry> GetFieldListMembers(TypeRecord.LR_FieldList fieldList)
+	{
+		try 
+		{
+			ArrayList<FieldMemberEntry> result = new ArrayList<FieldMemberEntry>();
+			for(TypeRecord.MemberRecord mr : fieldList.records)
+				switch(mr.recordKind)
+				{
+					case LF_MEMBER:
+						MR_Member member = (MR_Member)mr;
+						BinaryReader b = new BinaryReader(new ByteArrayProvider(member.offset.data), true);
+						int offset = 0;
+						switch(member.offset.type)
+						{
+							case LF_USHORT:
+								offset = b.readUnsignedShort(0);
+								break;
+							default:
+								return null;
+						}						
+						DataType dt = GetDataTypeByIndex(member.index);
+						String name = GetDataTypeNameByIndex(member.index);		
+						LeafRecordKind kind = GetTypeKind(member.index);
+						if(dt != null && name != null)
+							result.add(new FieldMemberEntry(offset, dt, member.name, "//" + name, false));
+						else if(kind != null)
+						{				
+							switch(kind)
+							{
+								case LF_BITFIELD:
+									LR_Bitfield bitfield = (LR_Bitfield)typeRecords.get((int)(member.index - 0x1000)).record;
+									dt = GetDataTypeByIndex(bitfield.type);							
+									result.add(new FieldMemberEntry(bitfield.length, dt, member.name, "", true));
+									break;
+								case LF_UNION:
+									if(name != null && unionMap.containsKey(name))
+									{
+										result.add(new FieldMemberEntry(offset, unionMap.get(name), member.name, "//" + name, false));
+										break;
+									}
+									return null;
+								default:
+									return null;
+							}
+						}
+						else
+							return null;
+						break;
+					default:				
+						return null;
+				}
+			return result;
+		}
+		catch (Exception e)
+		{
+			return null;			
+		}
+	}
 	
 	private boolean AddArrayType(TypeRecord.LR_Array arr)
 	{
@@ -338,6 +403,14 @@ public class TPIStream {
 				return true;
 			}
 		return false;
+	}
+	
+	public LeafRecordKind GetTypeKind(long index)
+	{
+		index -= 0x1000;
+		if(index > 0 && index < typeRecords.size())	
+			return typeRecords.get((int)index).kind;
+		return null;
 	}
 		
 	public DataType GetDataTypeByIndex(long index) throws Exception
@@ -386,6 +459,8 @@ public class TPIStream {
 						return ((LR_Structure)rec.record).name;
 					case LF_ENUM:
 						return ((LR_Enum)rec.record).name;
+					case LF_UNION:
+						return ((LR_Union)rec.record).name;
 					default:
 						break;
 				}

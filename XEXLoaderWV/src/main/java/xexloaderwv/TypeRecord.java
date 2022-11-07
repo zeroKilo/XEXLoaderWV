@@ -606,6 +606,26 @@ public class TypeRecord {
         }
     }	
 	
+	public enum MOCOM_UDT
+    {
+		CV_MOCOM_UDT_none		("CV_MOCOM_UDT_none", 0x00),
+		CV_MOCOM_UDT_ref 		("CV_MOCOM_UDT_ref", 0x01),
+		CV_MOCOM_UDT_value 		("CV_MOCOM_UDT_value", 0x02),
+		CV_MOCOM_UDT_interface 	("CV_MOCOM_UDT_interface", 0x03);
+		private final String name;
+        private final long value;
+        private MOCOM_UDT(String name, long value) { this.name = name; this.value = value; } 
+        public String getName() { return name; }
+        public long getValue() { return value; }
+        public static MOCOM_UDT getByValue(long l)
+        {
+        	for(MOCOM_UDT u : MOCOM_UDT.values())
+        		if(u.value == l)
+        			return u;
+        	return null;
+        }
+    }
+	
 	public abstract class LeafRecord
     { 
 		public DataType dataType = null;
@@ -640,16 +660,21 @@ public class TypeRecord {
 	
 	public class Property
 	{
-        public boolean fwdref;
-        public boolean opcast;
-        public boolean opassign;
-        public boolean cnested;
-        public boolean isnested;
-        public boolean ovlops;
-        public boolean ctor;
         public boolean packed;
-        public boolean reserved;
+        public boolean ctor;
+        public boolean ovlops;
+        public boolean isnested;
+        public boolean cnested;
+        public boolean opassign;
+        public boolean opcast;
+        public boolean fwdref;
         public boolean scoped;
+        public boolean hasuniquename;
+        public boolean sealed;
+        public boolean hfa;
+        public boolean intrinsic;
+        public MOCOM_UDT udt;
+        public boolean reserved;
 		public int _raw;
 		public Property(int u)
 		{
@@ -663,7 +688,12 @@ public class TypeRecord {
             opcast = Helper.GetBits(u, 6, 1) != 0;
             fwdref = Helper.GetBits(u, 7, 1) != 0;
             scoped = Helper.GetBits(u, 8, 1) != 0;
-            reserved = Helper.GetBits(u, 9, 7) != 0;
+            hasuniquename = Helper.GetBits(u, 9, 1) != 0;
+            sealed = Helper.GetBits(u, 10, 1) != 0;
+            hfa = Helper.GetBits(u, 11, 1) != 0;
+            intrinsic = Helper.GetBits(u, 12, 1) != 0;
+            udt = MOCOM_UDT.getByValue(Helper.GetBits(u, 13, 2));
+            reserved = Helper.GetBits(u, 15, 1) != 0;
 		}
 	}
 	
@@ -880,6 +910,7 @@ public class TypeRecord {
         public long vshape;
         public Value val;
         public String name;
+        public String uniquename;
 		
 		public LR_Structure(byte[] data) throws Exception
 		{
@@ -891,6 +922,8 @@ public class TypeRecord {
             vshape = b.readUnsignedInt(12);
             val = new Value(b, 16);
             name = Helper.ReadCString(b, 16 + val._rawSize);
+            if(property.hasuniquename)
+            	uniquename = Helper.ReadCString(b, 17 + val._rawSize + name.length());
 		}
 	}
 	
@@ -946,6 +979,7 @@ public class TypeRecord {
         public long field;
         public Value val;
         public String name;
+        public String uniquename;
 		
 		public LR_Union(byte[] data) throws Exception
 		{
@@ -955,6 +989,8 @@ public class TypeRecord {
 			field = b.readUnsignedInt(4);
 			val = new Value(b, 8);
 			name = Helper.ReadCString(b, 8 + val._rawSize);
+            if(property.hasuniquename)
+            	uniquename = Helper.ReadCString(b, 9 + val._rawSize + name.length());
 		}
 	}
 
@@ -1097,6 +1133,7 @@ public class TypeRecord {
         public long vshape;
         public Value val;
         public String name;
+        public String uniquename;
 		public LR_Class(byte[] data) throws Exception
 		{
 			BinaryReader b = new BinaryReader(new ByteArrayProvider(data), true);
@@ -1107,6 +1144,8 @@ public class TypeRecord {
 			vshape = b.readUnsignedInt(12);
 			val = new Value(b, 16);
 			name = Helper.ReadCString(b, 16 + val._rawSize);
+            if(property.hasuniquename)
+            	uniquename = Helper.ReadCString(b, 17 + val._rawSize + name.length());
 		}
 	}
 	
