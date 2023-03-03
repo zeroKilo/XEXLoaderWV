@@ -2,9 +2,11 @@
 
 this is a loader module for ghidra for XBox360 XEX files
 
-* supports PDB/XDB files
-
-* supports XEXP delta patches
+- supports PDB/XDB files
+  - In loader import page, click Advanced.
+  - Tick `Load PDB File` + `Use experimental PDB loader` and untick `Process .pdata`
+  - Select `MSDIA` parser
+- supports XEXP delta patches
 
 requires min. JDK 17
 
