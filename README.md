@@ -12,7 +12,7 @@ requires min. JDK 17
 
 [![Alt text](https://img.youtube.com/vi/coGz0f7hHTM/0.jpg)](https://www.youtube.com/watch?v=coGz0f7hHTM)
 
-
-[![Alt text](https://img.youtube.com/vi/dBoofGgraKM/0.jpg)](https://www.youtube.com/watch?v=dBoofGgraKM)
+<!-- this video is outdated -->
+<!-- [![Alt text](https://img.youtube.com/vi/dBoofGgraKM/0.jpg)](https://www.youtube.com/watch?v=dBoofGgraKM) -->
 
 (shoutout to my friend the Domo who got me into X360 RE)
