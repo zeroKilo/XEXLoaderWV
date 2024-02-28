@@ -15,8 +15,4 @@ requires min. JDK 17
 <!-- this video is outdated -->
 <!-- [![Alt text](https://img.youtube.com/vi/dBoofGgraKM/0.jpg)](https://www.youtube.com/watch?v=dBoofGgraKM) -->
 
-<<<<<<< HEAD
 (shoutout to my friend the Domo who got me into X360 RE)
-=======
-(shoutout to my friend the Domo who got me into X360 RE)
->>>>>>> origin/master
