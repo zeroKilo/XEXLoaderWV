@@ -367,7 +367,7 @@ public class XEXHeader {
 					nextSize = br.readInt(0);
 					for(int i = 24; i < buff.length;)
 					{
-						len = br.readShort(i);
+						len = br.readUnsignedShort(i);
 						if(len == 0)
 							break;
 						for(int j = 0; j < len; j++)
