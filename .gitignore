@@ -1,7 +1,11 @@
-
 XEXLoaderWV/src/main/help/help/xexloaderwv_TOC.xml
 XEXLoaderWV/src/main/help/help/xexloaderwv_map.xml
 XEXLoaderWV/src/main/help/help/xexloaderwv_HelpSet.hs
 XEXLoaderWV/src/main/help/help/topics/xexloaderwv/help.html
 XEXLoaderWV/src/main/help/help/topics/xexloaderwv/help.html
 XEXLoaderWV/.classpath
+XEXLoaderWV/.gradle/
+XEXLoaderWV/.settings/
+XEXLoaderWV/bin/
+XEXLoaderWV/build/
+XEXLoaderWV/dist/

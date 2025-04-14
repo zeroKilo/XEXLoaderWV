@@ -1,6 +1,6 @@
 eclipse.preferences.version=1
-org.eclipse.jdt.core.compiler.codegen.targetPlatform=11
-org.eclipse.jdt.core.compiler.compliance=11
+org.eclipse.jdt.core.compiler.codegen.targetPlatform=21
+org.eclipse.jdt.core.compiler.compliance=21
 org.eclipse.jdt.core.compiler.problem.annotationSuperInterface=error
 org.eclipse.jdt.core.compiler.problem.autoboxing=ignore
 org.eclipse.jdt.core.compiler.problem.deprecation=warning
@@ -44,4 +44,4 @@ org.eclipse.jdt.core.compiler.problem.unusedLocal=warning
 org.eclipse.jdt.core.compiler.problem.unusedParameter=ignore
 org.eclipse.jdt.core.compiler.problem.unusedPrivateMember=warning
 org.eclipse.jdt.core.compiler.problem.varargsArgumentNeedCast=warning
-org.eclipse.jdt.core.compiler.source=11
+org.eclipse.jdt.core.compiler.source=21
