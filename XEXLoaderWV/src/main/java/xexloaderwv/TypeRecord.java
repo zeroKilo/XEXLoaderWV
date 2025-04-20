@@ -842,7 +842,44 @@ public class TypeRecord {
 		@Override
 		public long GetSize() {
 			return 7 + offset._rawSize + name.length();
-		}		
+		}
+	}
+
+	public class MR_BClass extends MemberRecord
+	{
+		public FieldAttribute attr;
+		public long index;
+		public Value offset;
+
+		public MR_BClass(BinaryReader b, long pos) throws Exception
+		{
+			recordKind = MemberRecordKind.LF_BCLASS;
+			attr = new FieldAttribute(b.readUnsignedShort(pos));
+			index = b.readUnsignedInt(pos + 2);
+			offset = new Value(b, pos + 6);
+		}
+
+		@Override
+		public long GetSize() {
+			return 6 + offset._rawSize;
+		}
+	}
+
+	public class MR_VFuncTab extends MemberRecord
+	{
+		public long index;
+		public static String name = "__vt";
+
+		public MR_VFuncTab(BinaryReader b, long pos) throws Exception
+		{
+			recordKind = MemberRecordKind.LF_VFUNCTAB;
+			index = b.readUnsignedInt(pos + 2);
+		}
+
+		@Override
+		public long GetSize() {
+			return 2 + 4;
+		}
 	}
 	
 	public class LR_FieldList extends LeafRecord
@@ -871,6 +908,37 @@ public class TypeRecord {
 						MR_Member mr_m = new MR_Member(b, pos);
 						pos += mr_m.GetSize();
 						records.add(mr_m);
+						break;
+					case LF_BCLASS:
+					case LF_BINTERFACE:
+						MR_BClass mr_b = new MR_BClass(b, pos);
+						pos += mr_b.GetSize();
+						records.add(mr_b);
+						break;
+					case LF_VFUNCTAB:
+						MR_VFuncTab mr_v = new MR_VFuncTab(b, pos);
+						pos += mr_v.GetSize();
+						records.add(mr_v);
+						break;
+					// Placeholders for now
+					// TODO: Use ONEMETHOD leaves to autogen vtable datatypes
+					case LF_ONEMETHOD:
+						int attrs = b.readUnsignedShort(pos);
+						pos += 2;
+						pos += 4;
+						if ((attrs & 0x10) == 0x10) {
+							pos += 4;
+						}
+						pos += Helper.ReadCString(b, pos).length() + 1;
+						break;
+					case LF_METHOD:
+						pos += 2 + 4 + Helper.ReadCString(b, pos+6).length() + 1;
+						break;
+					case LF_NESTTYPE:
+						pos += 2 + 4 + Helper.ReadCString(b, pos+6).length() + 1;
+						break;
+					case LF_STMEMBER:
+						pos += 2 + 4 + Helper.ReadCString(b, pos+6).length() + 1;
 						break;
 					default:	
 						exit = true;

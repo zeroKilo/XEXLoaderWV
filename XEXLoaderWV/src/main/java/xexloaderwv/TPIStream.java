@@ -15,6 +15,7 @@ import ghidra.program.model.data.DoubleDataType;
 import ghidra.program.model.data.EnumDataType;
 import ghidra.program.model.data.FloatDataType;
 import ghidra.program.model.data.IntegerDataType;
+import ghidra.program.model.data.TypedefDataType;
 import ghidra.program.model.data.LongDataType;
 import ghidra.program.model.data.PointerDataType;
 import ghidra.program.model.data.ShortDataType;
@@ -26,11 +27,17 @@ import ghidra.util.task.TaskMonitor;
 import xexloaderwv.TypeRecord.BasicTypes;
 import xexloaderwv.TypeRecord.LR_Array;
 import xexloaderwv.TypeRecord.LR_Bitfield;
+import xexloaderwv.TypeRecord.LR_Class;
 import xexloaderwv.TypeRecord.LR_Enum;
+import xexloaderwv.TypeRecord.LR_MemberFunction;
+import xexloaderwv.TypeRecord.LR_Modifier;
+import xexloaderwv.TypeRecord.LR_Pointer;
 import xexloaderwv.TypeRecord.LR_Structure;
 import xexloaderwv.TypeRecord.LR_Union;
 import xexloaderwv.TypeRecord.LeafRecordKind;
+import xexloaderwv.TypeRecord.MR_BClass;
 import xexloaderwv.TypeRecord.MR_Member;
+import xexloaderwv.TypeRecord.MR_VFuncTab;
 
 public class TPIStream {
 
@@ -145,6 +152,7 @@ public class TPIStream {
 		long countArrays = 0;
 		long countUnions = 0;
 		long countClasses = 0;
+		long countModifiers = 0;
 		DataTypeManager dtMan = program.getDataTypeManager();
 		monitor.setMaximum(typeRecords.size());
 		monitor.setMessage("Loading type records");
@@ -179,19 +187,29 @@ public class TPIStream {
 					if(AddClassType((TypeRecord.LR_Class)rec.record))
 						countClasses++;	
 					break;
+				case LF_MODIFIER:
+					if (AddModifierType((TypeRecord.LR_Modifier)rec.record))
+						countModifiers++;
+					break;
 				default:
 					break;
 			}
 		}		
 		for(TypeRecord rec : typeRecords)
-			if(rec.record != null && rec.record.dataType != null)
-				dtMan.addDataType(rec.record.dataType, DataTypeConflictHandler.DEFAULT_HANDLER);
-	    Log.info(String.format("XEX Loader: Imported %d enums, %d structures, %d arrays, %d unions, %d classes", 
+			try
+			{
+				if(rec.record != null && rec.record.dataType != null)
+					dtMan.addDataType(rec.record.dataType, DataTypeConflictHandler.DEFAULT_HANDLER);
+			} catch (Exception ex) {				
+				Log.error("Failed to add " + rec.record.dataType.getName() + ":" + ex.getMessage());
+			}
+	    Log.info(String.format("XEX Loader: Imported %d enums, %d structures, %d arrays, %d unions, %d classes, %d modifiers", 
 	    						countEnums, 
 	    						countStructures, 
 	    						countArrays, 
 	    						countUnions,
-	    						countClasses));
+	    						countClasses,
+								countModifiers));
 	}
 	
 	private boolean AddClassType(TypeRecord.LR_Class clazz)
@@ -199,16 +217,24 @@ public class TPIStream {
 		try
 		{
 			StructureDataType newClass;
-			if(classMap.containsKey(clazz.name))
+			boolean existed = false;
+			if(classMap.containsKey(clazz.name)) {
 				newClass = classMap.get(clazz.name);
+				existed = true;
+			}
 			else
 			{
 				newClass = new StructureDataType(clazz.name, 0);
 				newClass.setPackingEnabled(true);
 				classMap.put(clazz.name, newClass);
 			}
-			if(clazz.field != 0)
-				for(TypeRecord rec : typeRecords)
+			if(clazz.field != 0) {
+				// Some PDBs have multiple definitions for datatypes ("UDT Mismatch" warning).
+				// This makes sure to overwrite the datatype with this new one instead of appending to the previous one. 
+				if (existed) {
+					newClass.deleteAll();
+				}
+				for(TypeRecord rec : typeRecords) {
 					if(rec.typeID == clazz.field)
 					{
 						TypeRecord.LR_FieldList fieldList = (TypeRecord.LR_FieldList)rec.record;
@@ -222,6 +248,8 @@ public class TPIStream {
 								newClass.addBitField(e.type, (int)e.offset, e.name, e.comment);
 						break;
 					}
+				}
+			}
 			newClass.repack();
 			clazz.dataType = newClass;
 			return true;
@@ -230,23 +258,48 @@ public class TPIStream {
 		{
 			return false;			
 		}
-	}	
+	}
+
+	private String GetModifierTypeName(TypeRecord.LR_Modifier modifier) {
+		return modifier.attr.getName() + "__" + GetDataTypeNameByIndex(modifier.type);
+	}
+
+	private boolean AddModifierType(TypeRecord.LR_Modifier modifier) {
+		try {
+			String name = GetModifierTypeName(modifier);
+			TypedefDataType dt = new TypedefDataType(name, GetDataTypeByIndex(modifier.type));
+			modifier.dataType = dt;
+			return true;
+		}
+		catch (Exception ex) {
+			return false;
+		}
+	}
 	
 	private boolean AddUnionType(TypeRecord.LR_Union union)
 	{
 		try
 		{
 			UnionDataType newUnion;
-			if(unionMap.containsKey(union.name))
+			boolean existed = false;
+			if(unionMap.containsKey(union.name)) {
 				newUnion = unionMap.get(union.name);
+				existed = true;
+			}
 			else
 			{
 				newUnion = new UnionDataType(union.name);
 				newUnion.setPackingEnabled(true);
 				unionMap.put(union.name, newUnion);
 			}
-			if(union.field != 0)
-				for(TypeRecord rec : typeRecords)
+			if(union.field != 0) {
+				if (existed) {
+					// unions don't have a deleteAll function for some reason
+					for (int i = newUnion.getNumComponents() - 1; i >= 0; i--) {
+						newUnion.delete(i);
+					}
+				}
+				for(TypeRecord rec : typeRecords) {
 					if(rec.typeID == union.field)
 					{
 						TypeRecord.LR_FieldList fieldList = (TypeRecord.LR_FieldList)rec.record;
@@ -259,7 +312,9 @@ public class TPIStream {
 							else
 								newUnion.addBitField(e.type, (int)e.offset, e.name, e.comment);
 						break;
-					}			
+					}
+				}
+			}
 			newUnion.repack();
 			union.dataType = newUnion;
 			return true;
@@ -275,16 +330,22 @@ public class TPIStream {
 		try
 		{
 			StructureDataType newStruct;
-			if(structMap.containsKey(str.name))
+			boolean existed = false;
+			if(structMap.containsKey(str.name)) {
 				newStruct = structMap.get(str.name);
+				existed = true;
+			}
 			else
 			{
 				newStruct = new StructureDataType(str.name, 0);
 				newStruct.setPackingEnabled(true);
 				structMap.put(str.name, newStruct);
 			}
-			if(str.field != 0)
-				for(TypeRecord rec : typeRecords)
+			if(str.field != 0) {
+				if (existed) {
+					newStruct.deleteAll();
+				}
+				for(TypeRecord rec : typeRecords) {
 					if(rec.typeID == str.field)
 					{
 						TypeRecord.LR_FieldList fieldList = (TypeRecord.LR_FieldList)rec.record;
@@ -298,6 +359,8 @@ public class TPIStream {
 								newStruct.addBitField(e.type, (int)e.offset, e.name, e.comment);
 						break;
 					}
+				}
+			}
 			newStruct.repack();
 			str.dataType = newStruct;
 			return true;
@@ -318,23 +381,14 @@ public class TPIStream {
 				{
 					case LF_MEMBER:
 						MR_Member member = (MR_Member)mr;
-						BinaryReader b = new BinaryReader(new ByteArrayProvider(member.offset.data), true);
-						int offset = 0;
-						switch(member.offset.type)
-						{
-							case LF_USHORT:
-								offset = b.readUnsignedShort(0);
-								break;
-							default:
-								return null;
-						}						
+						long offset = member.offset.val_long;
 						DataType dt = GetDataTypeByIndex(member.index);
-						String name = GetDataTypeNameByIndex(member.index);		
+						String name = GetDataTypeNameByIndex(member.index);
 						LeafRecordKind kind = GetTypeKind(member.index);
 						if(dt != null && name != null)
 							result.add(new FieldMemberEntry(offset, dt, member.name, "//" + name, false));
 						else if(kind != null)
-						{				
+						{
 							switch(kind)
 							{
 								case LF_BITFIELD:
@@ -356,14 +410,53 @@ public class TPIStream {
 						else
 							return null;
 						break;
-					default:				
+					case LF_BCLASS:
+					case LF_BINTERFACE:
+						MR_BClass bclass = (MR_BClass)mr;
+						offset = bclass.offset.val_long;
+						dt = GetDataTypeByIndex(bclass.index);
+						name = GetDataTypeNameByIndex(bclass.index);
+						String memberName = "__inherit_" + offset;
+						kind = GetTypeKind(bclass.index);
+						if(dt != null)
+							result.add(new FieldMemberEntry(offset, dt, memberName, "//" + name, false));
+						else if(kind != null)
+						{
+							switch(kind)
+							{
+								case LF_BITFIELD:
+									LR_Bitfield bitfield = (LR_Bitfield)typeRecords.get((int)(bclass.index - 0x1000)).record;
+									dt = GetDataTypeByIndex(bitfield.type);
+									result.add(new FieldMemberEntry(bitfield.length, dt, memberName, "", true));
+									break;
+								case LF_UNION:
+									if(name != null && unionMap.containsKey(name))
+									{
+										result.add(new FieldMemberEntry(offset, unionMap.get(name), memberName, "//" + name, false));
+										break;
+									}
+									return null;
+								default:
+									return null;
+							}
+						}
+						else
+							return null;
+						break;
+					case LF_VFUNCTAB:
+						// Placeholder void* for now, might implement something more complex later
+						MR_VFuncTab vfunctab = (MR_VFuncTab)mr;
+						dt = GetDataTypeByIndex(vfunctab.index);
+						result.add(new FieldMemberEntry(0, dt, MR_VFuncTab.name, "", false));
+						break;
+					default:
 						return null;
 				}
 			return result;
 		}
 		catch (Exception e)
 		{
-			return null;			
+			return null;
 		}
 	}
 	
@@ -425,13 +518,20 @@ public class TPIStream {
 				switch(rec.kind)
 				{
 					case LF_POINTER:
-						return new PointerDataType();
+						DataType dt = GetDataTypeByIndex(((LR_Pointer)rec.record).type);
+						return new PointerDataType(dt);
 					case LF_ARRAY:
 						return((LR_Array)rec.record).dataType;
 					case LF_STRUCTURE:
 						return ((LR_Structure)rec.record).dataType;
+					case LF_CLASS:
+						return ((LR_Class)rec.record).dataType;
 					case LF_ENUM:
 						return ((LR_Enum)rec.record).dataType;
+					case LF_MFUNCTION:
+						return ((LR_MemberFunction)rec.record).dataType;
+					case LF_MODIFIER:
+						return ((LR_Modifier)rec.record).dataType;
 					default:
 						index++;
 						break;
@@ -452,15 +552,19 @@ public class TPIStream {
 				switch(rec.kind)
 				{
 					case LF_POINTER:
-						return "pointer";
+						return GetDataTypeNameByIndex(((LR_Pointer)rec.record).type) + "*";
 					case LF_ARRAY:
 						return((LR_Array)rec.record).name;
 					case LF_STRUCTURE:
 						return ((LR_Structure)rec.record).name;
+					case LF_CLASS:
+						return ((LR_Class)rec.record).name;
 					case LF_ENUM:
 						return ((LR_Enum)rec.record).name;
 					case LF_UNION:
 						return ((LR_Union)rec.record).name;
+					case LF_MODIFIER:
+						return GetModifierTypeName((LR_Modifier)rec.record);
 					default:
 						break;
 				}
