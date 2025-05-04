@@ -15,4 +15,16 @@ requires min. JDK 17
 <!-- this video is outdated -->
 <!-- [![Alt text](https://img.youtube.com/vi/dBoofGgraKM/0.jpg)](https://www.youtube.com/watch?v=dBoofGgraKM) -->
 
-(shoutout to my friend the Domo who got me into X360 RE)
+## Build problem with gradle wrapper
+
+EDIT:2025.04.05
+
+it seems you have to update
+
+```(Ghidra Install Dir)\Ghidra\application.properties```
+
+and upgrade the gradle version like this
+
+```application.gradle.min=8.10```
+
+if you have problems with building from source in eclipse with the gradle wrapper.
