@@ -21,7 +21,6 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
       - uses: antoniovazquezblanco/setup-ghidra@v2
         with:
-          auth_token: ${{ secrets.GITHUB_TOKEN }}
           version: ${{ matrix.ghidra }}
       - name: Build with gradle
         working-directory: XEXLoaderWV
