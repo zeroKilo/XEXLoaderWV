@@ -246,7 +246,7 @@ public class XEXHeader {
 				Address addr = MakeAddress(fun.address & 0xFFFFFFFFL);
 				if(addr != null)
 				{
-					SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, "__imp__" + ImportRenamer.Rename(lib.name, fun.ordinal) , SourceType.IMPORTED);
+					SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, "__imp__" + ImportRenamer.Rename(lib.name.strip(), fun.ordinal) , SourceType.IMPORTED);
 					countImpl++;
 				}
 				if(fun.thunk != 0)
@@ -259,7 +259,7 @@ public class XEXHeader {
 					addr = MakeAddress(fun.thunk & 0xFFFFFFFFL);
 					if(addr != null)
 					{
-						SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, ImportRenamer.Rename(lib.name, fun.ordinal) , SourceType.ANALYSIS);
+						SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, ImportRenamer.Rename(lib.name.strip(), fun.ordinal) , SourceType.ANALYSIS);
 						countThunk++;
 					}
 				}
