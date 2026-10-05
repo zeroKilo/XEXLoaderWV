@@ -1,0 +1,36 @@
+name: Build XEXLoaderWV
+
+on:
+  workflow_dispatch:
+    inputs:
+      ghidra-version:
+        description: 'Ghidra version (x.y.z or latest)'
+        required: true
+
+jobs:
+  build:
+    name: 'XEXLoaderWV for Ghidra ${{ inputs.ghidra-version }}'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: 'zulu'
+      - name: Setup ghidra
+        id: setup-ghidra
+        uses: antoniovazquezblanco/setup-ghidra@v2.2.0
+        with:
+          version: ${{ inputs.ghidra-version }}
+          auth_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup gradle
+        uses: gradle/actions/setup-gradle@v6
+      - name: Build
+        run: |
+          cd XEXLoaderWV
+          gradle buildExtension
+      - uses: actions/upload-artifact@v7
+        with:
+          name: XEXLoaderWV-ci-ghidra-${{ steps.setup-ghidra.outputs.version }}
+          path: |
+            XEXLoaderWV/dist/*.zip
