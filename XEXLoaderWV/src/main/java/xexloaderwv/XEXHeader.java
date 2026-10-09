@@ -386,9 +386,22 @@ public class XEXHeader {
 				}
 				while(nextSize != 0);
 				byte[] input = bop.toByteArray();
-				byte[] output = new LzxDecompression().DecompressLZX(input);
-				for(int i = 0; i < output.length; i++)
-					peImage[i + posOut] = output[i];
+				// The XEX specifies the LZX dictionary size. Do not use the
+				// decompressor's legacy 32 KiB default for a larger window.
+				int windowSize = nc.windowSize;
+				if (windowSize < (1 << 15) || windowSize > (1 << 21)
+						|| (windowSize & (windowSize - 1)) != 0) {
+					throw new Exception("Invalid XEX LZX window size: 0x"
+							+ Integer.toHexString(windowSize));
+				}
+				int windowBits = Integer.numberOfTrailingZeros(windowSize);
+				byte[] output = new LzxDecompression().DecompressLZX(
+						input, null, loaderInfo.imageSize, windowBits);
+				if (output.length != peImage.length) {
+					throw new Exception("XEX decompressed image size mismatch: "
+							+ output.length + " != " + peImage.length);
+				}
+				System.arraycopy(output, 0, peImage, 0, output.length);
 				break;
 			default:
 				throw new Exception("Compression type " + baseFileFormat.compression + " not supported");
