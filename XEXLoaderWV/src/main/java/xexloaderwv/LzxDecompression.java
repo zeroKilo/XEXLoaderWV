@@ -171,14 +171,23 @@ public class LzxDecompression {
 	}
 
 	public byte[] DecompressLZX(byte[] data, byte[] windowData, long uncompressedSize) {
+		return DecompressLZX(data, windowData, uncompressedSize, 15);
+	}
+
+	public byte[] DecompressLZX(byte[] data, byte[] windowData, long uncompressedSize, int windowBits) {
 		InputStream in = new ByteArrayInputStream(data);
 		ByteArrayOutputStream output = new ByteArrayOutputStream();
 		LzxDecompression lzx = new LzxDecompression();
-		lzx.init(15, 0, data.length, uncompressedSize, false, windowData);
+		lzx.init(windowBits, 0, data.length, uncompressedSize, false, windowData);
 		try {
 			lzx.decompress(in, output, uncompressedSize);
 		} catch (Exception e) {
-			Msg.error(this, e.getMessage());
+			throw new IllegalStateException("LZX decompression failed (window bits="
+					+ windowBits + ", expected output=" + uncompressedSize + ")", e);
+		}
+		if (output.size() != uncompressedSize) {
+			throw new IllegalStateException("LZX output size mismatch: got "
+					+ output.size() + ", expected " + uncompressedSize);
 		}
 		return output.toByteArray();
 	}
