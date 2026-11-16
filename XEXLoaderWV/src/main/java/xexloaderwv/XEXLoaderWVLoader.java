@@ -61,12 +61,15 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 			Msg.info(this, "XEX Loader: Trying to load as retail...");
 			LoadXEX(provider, loadSpec, options, program, monitor, log, false);
 		} catch (Exception e) {
+			Msg.error(this, "XEX Loader: Retail import failed", e);
 			try {
 				Msg.info(this, "XEX Loader: Trying to load as dev kit...");
 				LoadXEX(provider, loadSpec, options, program, monitor, log, true);
 			} catch (Exception e2) {
-				Msg.info(this, "XEX Loader: Failed to load");
-				throw new IOException();
+				Msg.error(this, "XEX Loader: Devkit import failed", e2);
+				IOException failure = new IOException("XEX import failed for both retail and devkit keys", e2);
+				failure.addSuppressed(e);
+				throw failure;
 			}
 		}
 	}
@@ -83,6 +86,9 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 			XEXHeader h = new XEXHeader(buffROM, options, isDevKit);
 			boolean processPData = (boolean) options.get(0).getValue();
 			h.ProcessPEImage(program, monitor, log, processPData);
+			if (h.blocks.isEmpty()) {
+				throw new IOException("XEX image imported without any memory blocks");
+			}
 			h.ProcessImportLibraries(program, monitor);
 			if ((boolean) options.get(1).getValue())
 				LoadPDB(program, monitor, (boolean) options.get(2).getValue(), h);
