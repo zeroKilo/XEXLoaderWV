@@ -2,6 +2,9 @@
 
 XEXLoaderWV is a Ghidra extension for loading and analyzing Xbox 360 XEX executables.
 
+<img width="783" height="590" alt="image" src="https://github.com/user-attachments/assets/9661aa44-03da-48f3-98d1-31ae67baa7b2" />
+
+
 ## Features
 
 - Supports Xbox 360 XEX executable loading and PowerPC analysis.
