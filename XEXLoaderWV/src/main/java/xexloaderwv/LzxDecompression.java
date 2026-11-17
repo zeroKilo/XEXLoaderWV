@@ -10,8 +10,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import ghidra.util.Msg;
-
 public class LzxDecompression {
 
 	private static final int LZX_MIN_MATCH = 2;

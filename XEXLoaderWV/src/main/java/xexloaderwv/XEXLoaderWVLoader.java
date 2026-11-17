@@ -1,6 +1,5 @@
 package xexloaderwv;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -8,10 +7,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import javax.swing.SwingConstants;
-
-import ghidra.app.plugin.core.analysis.AutoAnalysisManager;
-import ghidra.app.services.DataTypeManagerService;
 import ghidra.app.util.Option;
 import ghidra.app.util.bin.BinaryReader;
 import ghidra.app.util.bin.ByteArrayProvider;
@@ -19,17 +14,12 @@ import ghidra.app.util.bin.ByteProvider;
 import ghidra.app.util.importer.MessageLog;
 import ghidra.app.util.opinion.AbstractLibrarySupportLoader;
 import ghidra.app.util.opinion.LoadSpec;
-import ghidra.app.util.opinion.Loader.ImporterSettings;
 import ghidra.framework.model.DomainObject;
 import ghidra.program.model.lang.LanguageCompilerSpecPair;
 import ghidra.program.model.listing.Program;
 import ghidra.util.Msg;
 import ghidra.util.exception.CancelledException;
-import ghidra.util.task.TaskBuilder;
-import ghidra.util.task.TaskLauncher;
 import ghidra.util.task.TaskMonitor;
-import pdb.symbolserver.ui.LoadPdbDialog;
-import pdb.symbolserver.ui.LoadPdbDialog.LoadPdbResults;
 
 public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 
@@ -51,20 +41,64 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 
 	@Override
 	protected void load(Program program, ImporterSettings settings) throws CancelledException, IOException {
-		this.load(settings.provider(), settings.loadSpec(), settings.options(), program, settings.monitor(), settings.log());		
-	}	
-	
-	
-	protected void load(ByteProvider provider, LoadSpec loadSpec, List<Option> options, Program program,
-			TaskMonitor monitor, MessageLog log) throws IOException {
+		XEXHeader header = loadXexImage(settings.provider(), settings.loadSpec(), settings.options(), program,
+				settings.monitor(), settings.log());
+		List<Option> options = settings.options();
+		TaskMonitor monitor = settings.monitor();
+		MessageLog log = settings.log();
+		String pdbPath = (String) optionValue(options, "Path to PDB/XDB file");
+		if (pdbPath != null && !pdbPath.isBlank()) {
+			try {
+				XEXPdbLoader.apply(Path.of(pdbPath.trim()).toFile(), header, program, monitor, log);
+			} catch (CancelledException ex) {
+				throw ex;
+			} catch (Exception ex) {
+				log.appendMsg("PDB/XDB import failed: " + ex);
+				Msg.error(this, "XEX Loader: PDB/XDB import failed", ex);
+			}
+		}
+		monitor.checkCancelled();
+		String mapPath = (String) optionValue(options, "Path to MAP file");
+		if (mapPath != null && !mapPath.isBlank()) {
+			try {
+				XEXMapLoader.apply(Path.of(mapPath.trim()), program, monitor, log);
+			} catch (CancelledException ex) {
+				throw ex;
+			} catch (IOException | java.nio.file.InvalidPathException ex) {
+				log.appendMsg("MAP import failed: " + ex.getMessage());
+			}
+		}
+		monitor.checkCancelled();
+		if (Boolean.TRUE.equals(optionValue(options, "Process RTTI"))) {
+			try {
+				if (!XEXRttiAnalyzer.process(program, monitor, log))
+					log.appendMsg("RTTI processing did not complete successfully");
+			} catch (CancelledException ex) {
+				throw ex;
+			} catch (Exception ex) {
+				log.appendMsg("RTTI processing failed: " + ex);
+				Msg.error(this, "XEX Loader: Optional RTTI processing failed", ex);
+			}
+		}
+	}
+
+	private XEXHeader loadXexImage(ByteProvider provider, LoadSpec loadSpec, List<Option> options, Program program,
+			TaskMonitor monitor, MessageLog log) throws IOException, CancelledException {
 		try {
 			Msg.info(this, "XEX Loader: Trying to load as retail...");
-			LoadXEX(provider, loadSpec, options, program, monitor, log, false);
+			return LoadXEX(provider, loadSpec, options, program, monitor, log, false);
+		} catch (CancelledException ex) {
+			throw ex;
 		} catch (Exception e) {
+			monitor.checkCancelled();
+			if (program.getMemory().getBlocks().length != 0)
+				throw new IOException("XEX retail import failed after memory mapping; no devkit retry", e);
 			Msg.error(this, "XEX Loader: Retail import failed", e);
 			try {
 				Msg.info(this, "XEX Loader: Trying to load as dev kit...");
-				LoadXEX(provider, loadSpec, options, program, monitor, log, true);
+				return LoadXEX(provider, loadSpec, options, program, monitor, log, true);
+			} catch (CancelledException ex) {
+				throw ex;
 			} catch (Exception e2) {
 				Msg.error(this, "XEX Loader: Devkit import failed", e2);
 				IOException failure = new IOException("XEX import failed for both retail and devkit keys", e2);
@@ -74,45 +108,24 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 		}
 	}
 
-	public void LoadXEX(ByteProvider provider, LoadSpec loadSpec, List<Option> options, Program program,
+	public XEXHeader LoadXEX(ByteProvider provider, LoadSpec loadSpec, List<Option> options, Program program,
 			TaskMonitor monitor, MessageLog log, boolean isDevKit) throws Exception {
-		byte[] buffROM = provider.getInputStream(0).readAllBytes();
-		String patchPath = (String) options.get(3).getValue();
-		if (!patchPath.equals(""))
-			buffROM = ApplyPatch(buffROM, patchPath, options, isDevKit);
-		ByteArrayProvider bapROM = new ByteArrayProvider(buffROM);
-		Msg.info(this, "XEX Loader: Loading header");
-		try {
-			XEXHeader h = new XEXHeader(buffROM, options, isDevKit);
-			boolean processPData = (boolean) options.get(0).getValue();
-			h.ProcessPEImage(program, monitor, log, processPData);
-			if (h.blocks.isEmpty()) {
-				throw new IOException("XEX image imported without any memory blocks");
-			}
-			h.ProcessImportLibraries(program, monitor);
-			if ((boolean) options.get(1).getValue())
-				LoadPDB(program, monitor, (boolean) options.get(2).getValue(), h);
-		} catch (Exception e) {
-			bapROM.close();
-			throw new Exception(e);
+		byte[] buffROM;
+		try (var input = provider.getInputStream(0)) {
+			buffROM = input.readAllBytes();
 		}
-		bapROM.close();
-	}
-
-	public void LoadPDB(Program program, TaskMonitor monitor, boolean useExperimental, XEXHeader h) throws Exception {
-		LoadPdbResults loadPdbResults = LoadPdbDialog.choosePdbForProgram(program);
-		if (loadPdbResults == null || loadPdbResults.pdbFile == null)
-			return;
-		File pdbFile = loadPdbResults.pdbFile;
-		if (!useExperimental) {
-			DataTypeManagerService dataTypeManagerService = AutoAnalysisManager.getAnalysisManager(program)
-					.getDataTypeManagerService();
-			LoadPdbTask loadPdbTask = new LoadPdbTask(program, pdbFile, loadPdbResults.useMsDiaParser,
-					loadPdbResults.control, dataTypeManagerService);
-			TaskBuilder.withTask(loadPdbTask).setStatusTextAlignment(SwingConstants.LEADING).setLaunchDelay(0);
-			new TaskLauncher(loadPdbTask, null, 0);
-		} else
-			h.ProcessAdditionalPDB(new PDBFile(pdbFile.getPath(), monitor, program), program, monitor, true, true);
+		String patchPath = (String) optionValue(options, "Path to xexp");
+		if (patchPath != null && !patchPath.isBlank())
+			buffROM = ApplyPatch(buffROM, patchPath, options, isDevKit);
+		Msg.info(this, "XEX Loader: Loading header");
+		XEXHeader h = new XEXHeader(buffROM, options, isDevKit);
+		boolean processPData = Boolean.TRUE.equals(optionValue(options, "Process .pdata"));
+		h.ProcessPEImage(program, monitor, log, processPData);
+		if (h.blocks.isEmpty())
+			throw new IOException("XEX image imported without any memory blocks");
+		h.ProcessImportLibraries(program, monitor);
+		monitor.checkCancelled();
+		return h;
 	}
 
 	public byte[] ChangeBaseFileFormat(byte[] image) throws Exception {
@@ -211,12 +224,22 @@ public class XEXLoaderWVLoader extends AbstractLibrarySupportLoader {
 	}
 
 	@Override
-	public List<Option> getDefaultOptions(ByteProvider provider, LoadSpec loadSpec,	DomainObject domainObject, boolean loadIntoProgram, boolean mirrorFsLayout) {
-		List<Option> list = new ArrayList<Option>();
-		list.add(new Option("Process .pdata", true));
-		list.add(new Option("Load PDB File", false));
-		list.add(new Option("use experimental PDB loader", false));
-		list.add(new Option("Path to xexp", ""));
+	public List<Option> getDefaultOptions(ByteProvider provider, LoadSpec loadSpec, DomainObject domainObject,
+			boolean loadIntoProgram, boolean mirrorFsLayout) {
+		List<Option> list = new ArrayList<>();
+		list.add(Option.newBoolean("Process .pdata").value(true).build());
+		list.add(new XEXFileOption("Path to PDB/XDB file", "", new String[] { "pdb", "xdb" }, "PDB/XDB File"));
+		list.add(new XEXFileOption("Path to xexp", "", "xexp", "XEX Patch File"));
+		list.add(new XEXFileOption("Path to MAP file", "", "map", "Microsoft MAP File"));
+		list.add(Option.newBoolean("Process RTTI").value(false).build());
 		return list;
 	}
+
+	private Object optionValue(List<Option> options, String name) {
+		for (Option option : options)
+			if (option.getName().equals(name))
+				return option.getValue();
+		return null;
+	}
+
 }

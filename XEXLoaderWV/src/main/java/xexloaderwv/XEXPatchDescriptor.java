@@ -17,12 +17,10 @@ public class XEXPatchDescriptor {
 	public int delta_image_source_size;
 	public int delta_image_target_offset;
 	public XEXDeltaPatch delta_patch;
-	
-	public XEXPatchDescriptor(byte[] data, int pos)
-	{
-		BinaryReader b = new BinaryReader(new ByteArrayProvider(data), false);		
-		try
-		{
+
+	public XEXPatchDescriptor(byte[] data, int pos) {
+		BinaryReader b = new BinaryReader(new ByteArrayProvider(data), false);
+		try {
 			size = b.readInt(pos);
 			target_version_value = b.readInt(pos + 4);
 			source_version_value = b.readInt(pos + 8);
@@ -40,6 +38,24 @@ public class XEXPatchDescriptor {
 			delta_image_target_offset = b.readInt(pos + 24);
 			pos += 28;
 			delta_patch = new XEXDeltaPatch(data, pos);
-		}catch (Exception e) { }
+		} catch (Exception e) {
+		}
+	}
+}
+
+class XEXDeltaPatch {
+	public int old_addr;
+	public int new_addr;
+	public int uncompressed_len;
+	public int compressed_len;
+	public byte[] patch_data;
+
+	public XEXDeltaPatch(byte[] data, int pos) throws Exception {
+		BinaryReader b = new BinaryReader(new ByteArrayProvider(data), false);
+		old_addr = b.readInt(pos);
+		new_addr = b.readInt(pos + 4);
+		uncompressed_len = Helper.forceU16(b.readShort(pos + 8));
+		compressed_len = Helper.forceU16(b.readShort(pos + 10));
+		patch_data = Helper.ReadArray(b, pos + 12, compressed_len);
 	}
 }

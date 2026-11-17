@@ -25,7 +25,6 @@ import ghidra.program.model.symbol.SourceType;
 import ghidra.program.model.symbol.SymbolUtilities;
 import ghidra.util.Msg;
 import ghidra.util.task.TaskMonitor;
-import xexloaderwv.PDBFile.SymbolRecord;
 
 public class XEXHeader {
 	public int magic;
@@ -163,49 +162,6 @@ public class XEXHeader {
 					break;
 				
 			}
-		}
-	}
-	
-	public void ProcessAdditionalPDB(PDBFile pdb, Program program, TaskMonitor monitor, boolean loadTypes, boolean loadSymbols) throws Exception
-	{
-
-		if(loadTypes)
-			pdb.tpi.ImportTypeRecords(program, monitor);
-		if(loadSymbols)
-		{
-			DOSHeader dos = new DOSHeader(peImage);
-			NTHeader nt = new NTHeader(peImage, dos.e_lfanew);
-			int address = imageBaseAddress;
-			for(NTHeader.SectionHeader sec : nt.secHeaders)
-				if(sec.Name.equals(".text"))
-				{
-					address += sec.VirtualAddress;
-					break;
-				}
-			int count = 0;
-			monitor.setProgress(0);
-			monitor.setMaximum(pdb.symbols.size());
-			monitor.setMessage("Applying symbol records");
-			for(int i = 0; i < pdb.symbols.size(); i++)
-			{
-				if(monitor.isCancelled())
-					return;
-				monitor.setProgress(i);
-				SymbolRecord sym = pdb.symbols.get(i);
-				if(sym.pubsymflags == 2 && sym.rectyp == 0x110e)
-				{
-					Address addr = MakeAddress((address + sym.off) & 0xFFFFFFFFL);
-					if(addr != null)
-					{
-						int len = sym.name.length();
-						String s = sym.name.substring(0, len < 2000 ? len : 2000);
-						SymbolUtilities.createPreferredLabelOrFunctionSymbol(program, addr, null, s, SourceType.ANALYSIS);
-						count++;
-					}
-				}
-			}
-			monitor.setProgress(0);
-			Msg.info(this, "XEX Loader: Loaded " + count + " pdb function symbols");	
 		}
 	}
 	
@@ -431,6 +387,22 @@ public class XEXHeader {
 		Msg.info(this, "XEX Loader: Processing PE Image");
 		DOSHeader dos = new DOSHeader(peImage);
 		NTHeader nt = new NTHeader(peImage, dos.e_lfanew);
+		Address imageBase = program.getAddressFactory().getDefaultAddressSpace()
+				.getAddress(Integer.toUnsignedLong(imageBaseAddress));
+		if (!program.getImageBase().equals(imageBase)) {
+			if (program.getMemory().getBlocks().length != 0)
+				throw new IllegalStateException("Cannot change image base after memory mapping");
+			program.setImageBase(imageBase, true);
+		}
+		log.appendMsg("XEX image diagnostics:");
+		log.appendMsg(String.format("  XEX image base: 0x%08X", imageBaseAddress));
+		log.appendMsg(String.format("  PE image base: 0x%08X", nt.optHeader.ImageBase));
+		log.appendMsg("  Ghidra image base: " + program.getImageBase());
+		log.appendMsg(String.format("  XEX entry point: 0x%08X", entryPointAddress));
+		log.appendMsg(String.format("  PE entry point RVA: 0x%08X", nt.optHeader.AddressOfEntryPoint));
+		log.appendMsg(String.format("  PE machine: 0x%04X", nt.imgHeader.machine & 0xFFFF));
+		log.appendMsg(String.format("  PE image size: 0x%08X", nt.optHeader.SizeOfImage));
+		log.appendMsg("  PE section count: " + nt.secHeaders.size());
 		byte[] pdata = null;
 		for(NTHeader.SectionHeader sec : nt.secHeaders)
 		{
